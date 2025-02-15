@@ -37,6 +37,7 @@ export type ResultType = {
 	posible: Array<
 		{
 			id: number;
+			muni: string;
 		} & AddressType
 	>;
 
@@ -159,9 +160,10 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 								<TableRow>
 									<TableHead></TableHead>
 									<TableHead>Colonia</TableHead>
-									<TableHead>Ciudad</TableHead>
+									<TableHead>Municipio</TableHead>
 									<TableHead>Estado</TableHead>
 									<TableHead>Código</TableHead>
+									<TableHead>Ciudad</TableHead>
 									<TableHead></TableHead>
 								</TableRow>
 							</TableHeader>
@@ -175,6 +177,7 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 											r.colony.toLowerCase().includes(search.toLowerCase()) ||
 											r.city.toLowerCase().includes(search.toLowerCase()) ||
 											r.state.toLowerCase().includes(search.toLowerCase()) ||
+											r.muni.toLowerCase().includes(search.toLowerCase()) ||
 											r.code
 												.toString()
 												.toLowerCase()
@@ -196,9 +199,10 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 												/>
 											</TableCell>
 											<TableCell>{r.colony}</TableCell>
-											<TableCell>{r.city}</TableCell>
+											<TableCell>{r.muni}</TableCell>
 											<TableCell>{r.state}</TableCell>
 											<TableCell>{r.code}</TableCell>
+											<TableCell>{r.city ? r.city : "-"}</TableCell>
 											<TableCell>
 												<Button variant={"outline"} size={"icon"} asChild>
 													<Link
@@ -239,10 +243,10 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 				<Button disabled={saving || !selected}>
 					{saving ? (
 						<>
-							<Loader2 /> Guardando...
+							<Loader2 /> Modificando...
 						</>
 					) : (
-						"Guardar"
+						"Modificar"
 					)}
 				</Button>
 			</form>

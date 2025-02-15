@@ -127,7 +127,10 @@ export async function save_result(
 		where: {
 			OR: [
 				{
-					name: `${row.name}`,
+					name: {
+						equals: `${row.name}`,
+						mode: "insensitive",
+					},
 				},
 				{
 					phone: `${row.phone}`,
@@ -149,7 +152,7 @@ export async function save_result(
 			excel_id,
 
 			code: row_selected?.d_code ? Number(row_selected.d_code) : row.code,
-			city: row_selected?.d_ciud ? row_selected.d_ciud : row.city,
+			city: row_selected?.d_muni ? row_selected.d_muni : row.city,
 			colony: row_selected?.d_asenta ? row_selected.d_asenta : row.colony,
 			state: row_selected?.d_esta ? row_selected.d_esta : row.state,
 			status: isReapeated ? "EQUAL" : status,
@@ -165,10 +168,10 @@ export async function save_result(
 			rowData: row.row,
 		},
 		update: {
-			code: row_selected ? Number(row_selected.d_code) : row.code,
-			city: row_selected ? row_selected.d_ciud : row.city,
-			colony: row_selected ? row_selected.d_asenta : row.colony,
-			state: row_selected ? row_selected.d_esta : row.state,
+			code: row_selected?.d_code ? Number(row_selected.d_code) : row.code,
+			city: row_selected?.d_muni ? row_selected.d_muni : row.city,
+			colony: row_selected?.d_asenta ? row_selected.d_asenta : row.colony,
+			state: row_selected?.d_esta ? row_selected.d_esta : row.state,
 
 			status: isReapeated ? "EQUAL" : status,
 		},
@@ -195,7 +198,7 @@ export async function proccess_row(
 		where: {
 			d_code: `${row.code}`,
 
-			d_ciud: {
+			d_muni: {
 				equals: `${row.city}`,
 				mode: "insensitive",
 			},
@@ -219,7 +222,10 @@ export async function proccess_row(
 
 			OR: [
 				{
-					name: `${row.name}`,
+					name: {
+						equals: `${row.name}`,
+						mode: "insensitive",
+					},
 				},
 				{
 					phone: `${row.phone}`,
@@ -239,6 +245,7 @@ export async function proccess_row(
 				{
 					id: correct.id,
 					code: Number(correct.d_code),
+					muni: correct.d_muni,
 					city: correct.d_ciud,
 					state: correct.d_esta,
 					colony: correct.d_asenta,
@@ -278,7 +285,7 @@ export async function proccess_row(
 				weight: 15, // Alto peso para coincidencia de estado
 			},
 			{
-				name: "d_ciud",
+				name: "d_muni",
 				weight: 6, // Ciudad importante pero flexible
 			},
 			{
@@ -302,7 +309,7 @@ export async function proccess_row(
 				d_esta: `${row.state}`,
 			},
 			{
-				d_ciud: `${row.city}`,
+				d_muni: `${row.city}`,
 			},
 			{
 				d_asenta: `${row.colony}`,
@@ -314,8 +321,7 @@ export async function proccess_row(
 
 	const validAddresses = possibleAddresses
 		.filter((a) => a.score! <= VALID_SCORE_THRESHOLD)
-		.sort((a, b) => a.score! - b.score!)
-		.slice(0, 50);
+		.sort((a, b) => a.score! - b.score!);
 
 	let errors: Array<string> = [];
 
@@ -323,7 +329,7 @@ export async function proccess_row(
 		errors.push("El codigo puede que este mal");
 	}
 
-	if (!validAddresses.some((a) => a.item.d_ciud === row.city)) {
+	if (!validAddresses.some((a) => a.item.d_muni === row.city)) {
 		errors.push("La ciudad puede que este mal");
 	}
 
@@ -332,7 +338,7 @@ export async function proccess_row(
 	}
 
 	if (!validAddresses.some((a) => a.item.d_asenta === row.colony)) {
-		errors.push("El asentamiento puede que este mal");
+		errors.push("La colonia puede que este mal");
 	}
 
 	const prev_results = await db.excelResult.findMany({
@@ -374,6 +380,7 @@ export async function proccess_row(
 
 		posible: validAddresses.map((a) => ({
 			score: a.score,
+			muni: a.item.d_muni,
 			city: a.item.d_ciud,
 			code: Number(a.item.d_code),
 			colony: a.item.d_asenta,
