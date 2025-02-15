@@ -101,6 +101,9 @@ export async function getExcel(excel: string) {
 export async function getAllExcels() {
 	const e = await db.excel.findMany({
 		where: {},
+		orderBy: {
+			createdAt: "desc",
+		},
 	});
 
 	return e;
