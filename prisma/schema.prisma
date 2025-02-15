@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Excel {
+  id  Int @id @default(autoincrement())
+
+  excel_url   String
+  excel_size  Float?
+  excel_name  String?
+  excel_id    String?
+  type        ExcelType
+  
+
+  from   Int
+  to     Int
+
+  last   Int @default(0)
+
+  finish Boolean @default(false)
+
+  createdAt  DateTime @default(now())
+}
+
+model ExcelResult {
+  id  Int @id @default(autoincrement())
+
+  excel_id Int
+  row      Int  
+
+  name     String?
+
+  equal_to Int?
+  equal ExcelResult? @relation("Equal", fields: [equal_to], references: [id])
+  equalResults ExcelResult[] @relation("Equal")
+  
+
+  colony String
+	city String
+	state String
+	code Int
+
+  rowData  Json
+
+  status  ResultStatus @default(OK)
+
+  @@unique([excel_id, row])
+
+  resultDate  DateTime @default(now())
+}
+
+enum ExcelType {
+  TIPE_1
+  TIPE_2
+}
+
+enum ResultStatus {
+  OK
+  EQUAL
+  ERROR
+}
+
+
+model States {
+
+  id Int @id @default(autoincrement())
+
+  state String @unique
+
+  address Address[]
+
+  last_update  DateTime   @default(now())
+}
+
+model Address {
+
+  id Int @id @default(autoincrement())
+
+  d_code  String
+
+  d_asenta String
+  d_tipo_asenta String
+
+  d_muni  String
+  d_esta  String
+  d_ciud  String
+
+  id_state Int
+  state   States  @relation(fields: [id_state], references: [id], onDelete: Cascade)
+
+}
