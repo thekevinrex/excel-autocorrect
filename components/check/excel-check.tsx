@@ -206,7 +206,7 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 											<TableCell>
 												<Button variant={"outline"} size={"icon"} asChild>
 													<Link
-														href={`https://www.google.com/maps/search/?api=1&query=${r.colony},${r.city},${r.state},${r.code}`}
+														href={`https://www.google.com/maps/search/?api=1&query=${r.colony},${r.muni},${r.state},${r.code}`}
 														target="_blank"
 														rel="noopener noreferrer"
 													>
