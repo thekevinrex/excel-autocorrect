@@ -29,7 +29,7 @@ const PrevExcels = ({ excels }: Props) => {
 		try {
 			await deleteExcel(id);
 
-			toast.success("Excel eliminado");
+			toast.success("Excel eliminado correctamente");
 		} catch (e) {
 			toast.error("Error al eliminar el excel");
 		}
@@ -73,7 +73,7 @@ const PrevExcels = ({ excels }: Props) => {
 								</TableCell>
 								<TableCell>{e.from}</TableCell>
 								<TableCell>{e.to}</TableCell>
-								<TableCell>{e.last === -1 ? "Primera" : e.last}</TableCell>
+								<TableCell>{e.last + 1}</TableCell>
 								<TableCell>
 									<div className="flex items-center gap-3">
 										<Button asChild>

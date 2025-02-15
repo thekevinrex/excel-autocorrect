@@ -13,7 +13,9 @@ const UploadDBExcel = ({ last_update }: { last_update?: Date }) => {
 	const [status, setStatus] = React.useState<"pending" | "loading">("pending");
 	const inputRef = React.useRef<HTMLInputElement>(null);
 
-	const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const handleFileUpload = async (
+		event: React.ChangeEvent<HTMLInputElement>
+	) => {
 		const file = event.target.files?.[0];
 		const reader = new FileReader();
 
@@ -26,7 +28,7 @@ const UploadDBExcel = ({ last_update }: { last_update?: Date }) => {
 
 			const workbook = XLSX.read(data, { type: "array" });
 
-			const chunkSize = 1500;
+			const chunkSize = 3000;
 
 			await prepareStateData(workbook.SheetNames);
 
@@ -101,7 +103,7 @@ const UploadDBExcel = ({ last_update }: { last_update?: Date }) => {
 			>
 				{status === "loading" ? (
 					<>
-						<Loader2 className="animate-spin" /> Cargando...
+						<Loader2 className="animate-spin" /> Actualizando...
 					</>
 				) : (
 					"Actualizar DB"

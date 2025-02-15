@@ -56,7 +56,7 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 			const row = data?.[pos];
 
 			if (!row) {
-				toast.error("Fila invalida");
+				toast.error("La fila a procesar es invalida");
 				return;
 			}
 

@@ -50,7 +50,7 @@ const Upload = ({ last_update }: { last_update?: Date }) => {
 				<CardHeader>
 					<div className="flex flex-row justify-between items-center gap-5">
 						<div className="flex flex-col gap-2 justify-start items-start">
-							<CardTitle>Tipo de excel a subir</CardTitle>
+							<CardTitle>Tipo de excel a procesar</CardTitle>
 							<TabsList>
 								<TabsTrigger value="tipo_1">Tipo 1</TabsTrigger>
 								<TabsTrigger value="tipo_2">Tipo 2</TabsTrigger>

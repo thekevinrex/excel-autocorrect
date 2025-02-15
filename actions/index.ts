@@ -182,6 +182,8 @@ export async function save_result(
 			last: row_num,
 		},
 	});
+
+	revalidatePath("/upload");
 }
 
 export async function proccess_row(
@@ -326,7 +328,7 @@ export async function proccess_row(
 	}
 
 	if (!validAddresses.some((a) => a.item.d_esta === row.state)) {
-		errors.push("La estado puede que este mal");
+		errors.push("El estado puede que este mal");
 	}
 
 	if (!validAddresses.some((a) => a.item.d_asenta === row.colony)) {
