@@ -40,12 +40,12 @@ model ExcelResult {
   row      Int  
 
   name     String?
+  phone    String?
 
   equal_to Int?
   equal ExcelResult? @relation("Equal", fields: [equal_to], references: [id])
   equalResults ExcelResult[] @relation("Equal")
   
-
   colony String
 	city String
 	state String

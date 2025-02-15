@@ -17,6 +17,7 @@ type Props = {
 export type DataType = {
 	num: number;
 	name: string;
+	phone: string;
 	address: string;
 	local: number;
 

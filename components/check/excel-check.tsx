@@ -57,6 +57,7 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 
 			if (!row) {
 				toast.error("Fila invalida");
+				return;
 			}
 
 			const result = await proccess_row(excel.id, row);
@@ -136,7 +137,7 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 				<Alert className="bg-cyan-500 text-white">
 					<AlertTitle>Fila repetida</AlertTitle>
 					<AlertDescription>
-						Se detectó una posible fila repetida
+						Se detectó un posible nombre o telefono repetido
 					</AlertDescription>
 				</Alert>
 			)}
@@ -235,13 +236,11 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 				action={handleSubmit}
 				className="flex flex-row items-center gap-5 justify-end"
 			>
-				<Button disabled={saving || result.status !== "OK" ? !selected : false}>
+				<Button disabled={saving || !selected}>
 					{saving ? (
 						<>
 							<Loader2 /> Guardando...
 						</>
-					) : result.status === "OK" ? (
-						"Continuar"
 					) : (
 						"Guardar"
 					)}

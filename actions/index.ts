@@ -35,6 +35,8 @@ export async function prepareStateData(states: string[]) {
 			last_update: new Date(),
 		})),
 	});
+
+	revalidatePath("/upload");
 }
 
 export async function updateStateData(
@@ -64,6 +66,7 @@ export async function updateStateData(
 	await db.address.createMany({
 		data: data.map((d) => ({
 			...d,
+
 			id_state: s.id,
 		})),
 	});
@@ -122,11 +125,14 @@ export async function save_result(
 
 	const isReapeated = await db.excelResult.findFirst({
 		where: {
-			city: row_selected?.d_ciud ? row_selected.d_ciud : row.city,
-			code: row_selected?.d_code ? Number(row_selected.d_code) : row.code,
-			state: row_selected?.d_esta ? row_selected.d_esta : row.state,
-			colony: row_selected?.d_asenta ? row_selected.d_asenta : row.colony,
-			name: row.name,
+			OR: [
+				{
+					name: `${row.name}`,
+				},
+				{
+					phone: `${row.phone}`,
+				},
+			],
 
 			excel_id: excel_id,
 		},
@@ -153,7 +159,8 @@ export async function save_result(
 				? isReapeated?.equal_to || isReapeated.id
 				: undefined,
 
-			name: row.name,
+			name: `${row.name}`,
+			phone: `${row.phone}`,
 
 			rowData: row.row,
 		},
@@ -206,25 +213,16 @@ export async function proccess_row(
 	//  Verify repeated
 	const repeated = await db.excelResult.findFirst({
 		where: {
-			code: row.code,
-
 			excel_id: excel_id,
-			name: row.name,
 
-			city: {
-				equals: `${row.city}`,
-				mode: "insensitive",
-			},
-
-			state: {
-				equals: `${row.state}`,
-				mode: "insensitive",
-			},
-
-			colony: {
-				equals: `${row.colony}`,
-				mode: "insensitive",
-			},
+			OR: [
+				{
+					name: `${row.name}`,
+				},
+				{
+					phone: `${row.phone}`,
+				},
+			],
 		},
 	});
 
@@ -342,28 +340,27 @@ export async function proccess_row(
 	});
 
 	const fusePrev = new Fuse(prev_results, {
-		keys: ["city", "state", "name", "code", "colony"],
+		keys: ["name", "phone"],
 		includeScore: true,
 		shouldSort: true,
 		useExtendedSearch: true,
 		minMatchCharLength: 3, // Reducir para permitir coincidencias más flexibles
-		threshold: 0.3,
+		threshold: 0.2,
 	});
 
 	const possibleEqual = fusePrev.search({
-		$and: [
+		$or: [
 			{
-				city: `${row.city}`,
-				state: `${row.state}`,
 				name: `${row.name}`,
-				code: `${row.code}`,
-				colony: `${row.colony}`,
+			},
+			{
+				phone: `${row.phone}`,
 			},
 		],
 	});
 
 	if (possibleEqual.length > 0) {
-		errors.push("La direccion es posible que ya fue procesada");
+		errors.push("El nombre o telefono puede que este repetido");
 	}
 
 	// 5. Resultado final con sugerencias priorizadas
@@ -424,22 +421,21 @@ export async function export_excel(excel_id: number) {
 
 	// Mapear los resultados con sus colores correspondientes
 	return results.map((r) => {
-		let color;
+		let color = null;
 
-		switch (r.status) {
-			case "EQUAL":
-				color = colorMap.get(r.id) || "00FF00"; // "green" en RGB
-				break;
-			case "OK":
-				color = "00FF00"; // "green" en RGB
-				break;
-			default:
-				if (colorMap.has(r.id)) {
-					color = colorMap.get(r.id) || "FF0000"; // "red" en RGB
-				} else {
+		if (colorMap.has(r.id)) {
+			color = colorMap.get(r.id);
+		}
+
+		if (!color) {
+			switch (r.status) {
+				case "OK":
+					color = "00FF00"; // "green" en RGB
+					break;
+				default:
 					color = "FF0000"; // "red" en RGB
-				}
-				break;
+					break;
+			}
 		}
 
 		return {

@@ -42,6 +42,7 @@ export function excelType1(range: any): DataType[] {
 			city: r["I"],
 			state: r["J"],
 			code: r["K"],
+			phone: r["L"],
 
 			row: r,
 		} as DataType;
@@ -63,6 +64,7 @@ export function excelType2(range: any): DataType[] {
 			code: r["L"],
 			city: r["M"],
 			state: r["N"],
+			phone: r["O"],
 
 			row: r,
 		} as DataType;

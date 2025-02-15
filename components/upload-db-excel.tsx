@@ -5,7 +5,6 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
 import * as XLSX from "xlsx";
-import { Label } from "./ui/label";
 import { Loader2 } from "lucide-react";
 import { prepareStateData, updateStateData } from "@/actions";
 import { toast } from "sonner";
@@ -27,7 +26,7 @@ const UploadDBExcel = ({ last_update }: { last_update?: Date }) => {
 
 			const workbook = XLSX.read(data, { type: "array" });
 
-			const chunkSize = 500;
+			const chunkSize = 1500;
 
 			await prepareStateData(workbook.SheetNames);
 
@@ -38,20 +37,26 @@ const UploadDBExcel = ({ last_update }: { last_update?: Date }) => {
 					});
 
 					for (let i = 0; i < jsonData.length; i += chunkSize) {
-						await updateStateData(
-							state,
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							jsonData.slice(i, i + chunkSize).map((j: any) => ({
-								d_asenta: j?.d_asenta || "",
-								d_tipo_asenta: j?.d_tipo_asenta || "",
+						try {
+							await updateStateData(
+								state,
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								jsonData.slice(i, i + chunkSize).map((j: any) => ({
+									d_asenta: j?.d_asenta || "",
+									d_tipo_asenta: j?.d_tipo_asenta || "",
 
-								d_ciud: j?.d_ciudad || "",
-								d_code: j.d_codigo || "",
+									d_ciud: j?.d_ciudad || "",
+									d_code: j.d_codigo || "",
 
-								d_esta: j?.d_estado || state,
-								d_muni: j?.D_mnpio || "",
-							}))
-						);
+									d_esta: j?.d_estado || state,
+									d_muni: j?.D_mnpio || "",
+								}))
+							);
+						} catch (e) {
+							toast.error(
+								"Lo sentimos ha ocurrido un error al actualizar la BD"
+							);
+						}
 					}
 				})
 			)
