@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -30,51 +28,50 @@ const UploadDBExcel = ({ last_update }: { last_update?: Date }) => {
 
 			const chunkSize = 3000;
 
-			await prepareStateData(workbook.SheetNames);
+			try {
+				await prepareStateData(workbook.SheetNames);
 
-			Promise.all(
-				workbook.SheetNames.map(async (state) => {
-					const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[state], {
-						blankrows: false,
-					});
+				await Promise.all(
+					workbook.SheetNames.map(async (state) => {
+						const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[state], {
+							blankrows: false,
+						});
 
-					for (let i = 0; i < jsonData.length; i += chunkSize) {
-						try {
-							await updateStateData(
-								state,
-								// eslint-disable-next-line @typescript-eslint/no-explicit-any
-								jsonData.slice(i, i + chunkSize).map((j: any) => ({
-									d_asenta: j?.d_asenta || "",
-									d_tipo_asenta: j?.d_tipo_asenta || "",
+						for (let i = 0; i < jsonData.length; i += chunkSize) {
+							try {
+								await updateStateData(
+									state,
+									// eslint-disable-next-line @typescript-eslint/no-explicit-any
+									jsonData.slice(i, i + chunkSize).map((j: any) => ({
+										d_asenta: j?.d_asenta || "",
+										d_tipo_asenta: j?.d_tipo_asenta || "",
 
-									d_ciud: j?.d_ciudad || "",
-									d_code: j.d_codigo || "",
+										d_ciud: j?.d_ciudad || "",
+										d_code: j.d_codigo || "",
 
-									d_esta: j?.d_estado || state,
-									d_muni: j?.D_mnpio || "",
-								}))
-							);
-						} catch (e) {
-							toast.error(
-								"Lo sentimos ha ocurrido un error al actualizar la BD"
-							);
+										d_esta: j?.d_estado || state,
+										d_muni: j?.D_mnpio || "",
+									}))
+								);
+							} catch (e) {
+								toast.error(
+									"Lo sentimos ha ocurrido un error al actualizar la BD"
+								);
+							}
 						}
-					}
-				})
-			)
-				.then(() => {
-					toast.success("BD actualizada correctamente");
-				})
-				.catch(() => {
-					toast.error("Lo sentimos ha occurrido un error");
-				})
-				.finally(() => {
-					setStatus("pending");
+					})
+				);
 
-					if (inputRef.current) {
-						inputRef.current.value = "";
-					}
-				});
+				toast.success("BD actualizada correctamente");
+			} catch (e) {
+				toast.error("Lo sentimos ha occurrido un error");
+			} finally {
+				setStatus("pending");
+
+				if (inputRef.current) {
+					inputRef.current.value = "";
+				}
+			}
 		};
 
 		reader.onloadstart = () => {
