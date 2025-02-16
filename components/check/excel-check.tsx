@@ -400,37 +400,42 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 
 			<form
 				action={handleSubmit}
-				className="flex flex-row items-center gap-5 justify-end"
+				className="flex flex-col md:flex-row items-center gap-5 justify-between"
 			>
-				<ExportButton
-					excel={excel}
-					variant={{
-						variant: "secondary",
-					}}
-				/>
-				<Button disabled={saving || !selected}>
-					{saving ? (
-						<>
-							<Loader2 /> Modificando...
-						</>
-					) : (
-						"Modificar"
-					)}
-				</Button>
-				<Button
-					type="button"
-					onClick={handleSkip}
-					variant={"destructive"}
-					disabled={skip || saving}
-				>
-					{skip ? (
-						<>
-							<Loader2 /> Saltando...
-						</>
-					) : (
-						"Saltar"
-					)}
-				</Button>
+				<div>
+					<ExportButton
+						excel={excel}
+						variant={{
+							variant: "secondary",
+						}}
+					/>
+				</div>
+
+				<div className="flex flex-row gap-5 items-center justify-end">
+					<Button disabled={saving || !selected}>
+						{saving ? (
+							<>
+								<Loader2 /> Modificando...
+							</>
+						) : (
+							"Modificar"
+						)}
+					</Button>
+					<Button
+						type="button"
+						onClick={handleSkip}
+						variant={"destructive"}
+						disabled={skip || saving}
+					>
+						{skip ? (
+							<>
+								<Loader2 /> Saltando...
+							</>
+						) : (
+							"Saltar"
+						)}
+					</Button>
+				</div>
 			</form>
 		</>
 	);
