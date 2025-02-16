@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Card } from "../ui/card";
+import { Card, CardHeader, CardTitle } from "../ui/card";
 import {
 	Table,
 	TableBody,
@@ -22,6 +22,15 @@ const ExcelTable = ({ data, pos }: Props) => {
 
 	return (
 		<Card>
+			<CardHeader>
+				<div className="flex justify-between gap-5 items-center">
+					<CardTitle>Fila actual </CardTitle>
+
+					<div className="text-sm text-muted-foreground">{`${pos + 1} / ${
+						data.length
+					}`}</div>
+				</div>
+			</CardHeader>
 			<Table>
 				<TableHeader>
 					<TableRow>

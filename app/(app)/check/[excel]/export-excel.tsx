@@ -34,6 +34,17 @@ const ExportExcel = ({ excel }: Props) => {
 				pattern: "solid",
 				fgColor: { argb: item.color.replace("#", "") }, // Convertir color a formato ARGB
 			};
+
+			// Aplicar formato a la celda
+			item.modified.forEach((col: string) => {
+				const cell = row.getCell(col); // El índice de la columna es el índice + 1
+
+				cell.font = {
+					name: "Arial",
+					italic: true,
+					size: 10,
+				};
+			});
 		});
 
 		const buffer = await workbook.xlsx.writeBuffer();

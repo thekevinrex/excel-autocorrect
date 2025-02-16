@@ -3,7 +3,7 @@
 import { DataType } from "@/app/(app)/check/[excel]/check";
 import { ResultType } from "@/components/check/excel-check";
 import db from "@/lib/db";
-import { toExcel } from "@/lib/utils";
+import { toExcel, verifyModified } from "@/lib/utils";
 import { ResultStatus } from "@prisma/client";
 import { UTApi } from "uploadthing/server";
 
@@ -442,16 +442,18 @@ export async function export_excel(excel_id: number) {
 		if (!color) {
 			switch (r.status) {
 				case "OK":
-					color = "00FF00"; // "green" en RGB
+					// blue en rgb
+					color = "22d3ee"; // "blue" en RGB
 					break;
 				default:
-					color = "FF0000"; // "red" en RGB
+					color = "22d3ee"; // "red" en RGB
 					break;
 			}
 		}
 
 		return {
 			row: toExcel(r, excel.type),
+			modified: verifyModified(r, excel.type),
 			color,
 		};
 	});

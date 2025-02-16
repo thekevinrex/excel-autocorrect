@@ -94,6 +94,7 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 
 			toast.success("Fila guardada correctamente");
 
+			setSearch("");
 			setPos(pos + 1);
 		} catch {
 			toast.error("Lo sentimos ha ocurrido un error al guardar el resultado");

@@ -106,3 +106,71 @@ export function toExcelType2(result: ExcelResult): any {
 		N: result.state,
 	};
 }
+
+export function verifyModified(result: ExcelResult, type: ExcelType) {
+	if (type === "TIPE_1") {
+		return verifyModifiedType1(result as any);
+	}
+
+	if (type === "TIPE_2") {
+		return verifyModifiedType2(result as any);
+	}
+
+	throw new Error("Invalid excel type");
+}
+
+export function verifyModifiedType1(
+	result: ExcelResult & { rowData: { [key: string]: any } }
+): any {
+	let modified = [];
+
+	if (!result.rowData) {
+		return [];
+	}
+
+	if (result.colony !== result.rowData["H"]) {
+		modified.push("H");
+	}
+
+	if (result.city !== result.rowData["I"]) {
+		modified.push("I");
+	}
+
+	if (result.state !== result.rowData["J"]) {
+		modified.push("J");
+	}
+
+	if (result.code !== result.rowData["K"]) {
+		modified.push("K");
+	}
+
+	return modified;
+}
+
+export function verifyModifiedType2(
+	result: ExcelResult & { rowData: { [key: string]: any } }
+): any {
+	let modified = [];
+
+	if (!result.rowData) {
+		return [];
+	}
+
+	if (result.colony !== result.rowData["K"]) {
+		modified.push("K");
+	}
+
+	if (result.city !== result.rowData["L"]) {
+		modified.push("L");
+	}
+
+	if (result.state !== result.rowData["M"]) {
+		modified.push("M");
+	}
+
+	if (result.code !== result.rowData["N"]) {
+		modified.push("N");
+	}
+
+	return modified;
+}
