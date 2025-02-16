@@ -10,7 +10,6 @@ import React from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
-import Link from "next/link";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Filter, Loader2, MapPin, Trash2 } from "lucide-react";
@@ -53,7 +52,7 @@ export type ResultType = {
 };
 
 const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
-	const [result, setResult] = React.useState<ResultType | null>(null);
+	const [result, setResult] = React.useState<ResultType | null | boolean>(null);
 	const [selected, setSelected] = React.useState<number | null>(null);
 	const [saving, setSaving] = React.useState(false);
 	const [skip, setSkip] = React.useState(false);
@@ -102,12 +101,74 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 			setShow(result.posible);
 			setSelected(result.posible.length > 0 ? result.posible[0].id : null);
 		} catch (e) {
+			setResult(false);
+
 			toast.error("Lo sentimos ha ocurrido un error al cargar los resultados");
 		}
 	}, [data, pos]);
 
-	if (!result) {
+	const handleSkip = async () => {
+		const row = data?.[pos];
+
+		if (!row) {
+			return;
+		}
+
+		try {
+			setSkip(true);
+
+			await skip_result(excel.id, pos, row);
+
+			toast.success("Fila saltada correctamente");
+
+			setFilters({
+				code: "",
+				colony: "",
+				search: "",
+				asenta: "",
+				advanced: false,
+			});
+
+			setPos(pos + 1);
+		} catch {
+			toast.error("Lo sentimos ha ocurrido un error al saltar la fila");
+		} finally {
+			setSkip(false);
+		}
+	};
+
+	if (result === null) {
 		return "Cargando resultados...";
+	}
+
+	if (typeof result === "boolean") {
+		return (
+			<>
+				<Alert variant={"destructive"}>
+					<AlertTitle className="font-semibold text-base">
+						Problemas al cargar los resultados
+					</AlertTitle>
+					<AlertDescription>
+						Se detectaron problemas y no se pudo procesar la fila
+					</AlertDescription>
+				</Alert>
+
+				<form
+					action={handleSkip}
+					className="flex flex-row items-center gap-5 justify-end"
+				>
+					<Button variant={"destructive"} disabled={skip || saving}>
+						{skip ? (
+							<>
+								<Loader2 /> Saltando...
+							</>
+						) : (
+							"Saltar"
+						)}
+					</Button>
+				</form>
+			</>
+		);
 	}
 
 	const handleSubmit = async () => {
@@ -143,36 +204,6 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 			toast.error("Lo sentimos ha ocurrido un error al guardar el resultado");
 		} finally {
 			setSaving(false);
-		}
-	};
-
-	const handleSkip = async () => {
-		const row = data?.[pos];
-
-		if (!row) {
-			return;
-		}
-
-		try {
-			setSkip(true);
-
-			await skip_result(excel.id, pos, row);
-
-			toast.success("Fila saltada correctamente");
-
-			setFilters({
-				code: "",
-				colony: "",
-				search: "",
-				asenta: "",
-				advanced: false,
-			});
-
-			setPos(pos + 1);
-		} catch {
-			toast.error("Lo sentimos ha ocurrido un error al saltar la fila");
-		} finally {
-			setSkip(false);
 		}
 	};
 

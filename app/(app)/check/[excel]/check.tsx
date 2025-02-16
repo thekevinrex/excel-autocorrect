@@ -9,6 +9,9 @@ import { formatExcel } from "@/lib/utils";
 import { toast } from "sonner";
 import ExcelCheck from "@/components/check/excel-check";
 import ExportExcel from "./export-excel";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 type Props = {
 	excel: Excel;
@@ -73,6 +76,14 @@ const Check = ({ excel, tipos }: Props) => {
 
 	return (
 		<>
+			<div className="">
+				<Button variant={"outline"} asChild>
+					<Link href={"/upload"}>
+						<ArrowLeft />
+						Inicio
+					</Link>
+				</Button>
+			</div>
 			<ExcelTable data={data} pos={pos} setPos={setPos} />
 
 			<ExcelCheck

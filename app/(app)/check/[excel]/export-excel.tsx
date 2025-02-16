@@ -9,6 +9,8 @@ import React from "react";
 import * as ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 type Props = {
 	excel: Excel;
@@ -72,14 +74,25 @@ const ExportExcel = ({ excel }: Props) => {
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Exportar excel</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<Button onClick={handleExport}>Exportar</Button>
-			</CardContent>
-		</Card>
+		<>
+			<div className="">
+				<Button variant={"outline"} asChild>
+					<Link href={"/upload"}>
+						<ArrowLeft />
+						Inicio
+					</Link>
+				</Button>
+			</div>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Exportar excel</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<Button onClick={handleExport}>Exportar</Button>
+				</CardContent>
+			</Card>
+		</>
 	);
 };
 

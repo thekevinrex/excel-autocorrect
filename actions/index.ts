@@ -163,8 +163,8 @@ export async function save_result(
 			city: row_selected?.d_muni ? row_selected.d_muni : row.city,
 			colony: row_selected?.d_asenta ? row_selected.d_asenta : row.colony,
 			state: row_selected?.d_esta ? row_selected.d_esta : row.state,
-			status: isReapeated ? "EQUAL" : status,
 			row: row_num,
+			status: isReapeated ? "EQUAL" : status,
 
 			equal_to: isReapeated
 				? isReapeated?.equal_to || isReapeated.id
@@ -182,6 +182,10 @@ export async function save_result(
 			state: row_selected?.d_esta ? row_selected.d_esta : row.state,
 
 			status: isReapeated ? "EQUAL" : status,
+
+			equal_to: isReapeated
+				? isReapeated?.equal_to || isReapeated.id
+				: undefined,
 		},
 	});
 
@@ -202,6 +206,29 @@ export async function skip_result(
 	row_num: number,
 	row: DataType
 ) {
+	const isReapeated =
+		row.name || row.phone
+			? await db.excelResult.findFirst({
+					where: {
+						OR: [
+							{
+								name: row.name
+									? {
+											equals: `${row.name}`,
+											mode: "insensitive",
+									  }
+									: undefined,
+							},
+							{
+								phone: row.phone ? `${row.phone}` : undefined,
+							},
+						],
+
+						excel_id: excel_id,
+					},
+			  })
+			: null;
+
 	await db.excelResult.upsert({
 		where: {
 			excel_id_row: {
@@ -216,8 +243,12 @@ export async function skip_result(
 			city: row.city,
 			colony: row.colony,
 			state: row.state,
-			status: "SKIP",
 			row: row_num,
+			status: isReapeated ? "EQUAL" : "SKIP",
+
+			equal_to: isReapeated
+				? isReapeated?.equal_to || isReapeated.id
+				: undefined,
 
 			name: row.name ? `${row.name}` : undefined,
 			phone: row.phone ? `${row.phone}` : undefined,
@@ -229,7 +260,11 @@ export async function skip_result(
 			city: row.city,
 			colony: row.colony,
 			state: row.state,
-			status: "SKIP",
+			status: isReapeated ? "EQUAL" : "SKIP",
+
+			equal_to: isReapeated
+				? isReapeated?.equal_to || isReapeated.id
+				: undefined,
 		},
 	});
 
