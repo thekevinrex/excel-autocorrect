@@ -418,8 +418,7 @@ export async function proccess_row(
 
 	const validAddresses = possibleAddresses
 		.filter((a) => a.score! <= VALID_SCORE_THRESHOLD)
-		.sort((a, b) => a.score! - b.score!)
-		.slice(0, 100);
+		.sort((a, b) => a.score! - b.score!);
 
 	let errors: Array<string> = [];
 
@@ -517,6 +516,72 @@ export async function search_results(
 			d_code: code ? code : undefined,
 		},
 	});
+
+	if (results.length <= 0) {
+		const address = await db.address.findMany({});
+
+		const fuseAddress = new Fuse(address, {
+			keys: [
+				{
+					name: "d_asenta",
+					weight: 5, // Peso aumentado para colonia
+				},
+				{
+					name: "d_tipo_asenta",
+					weight: 5, // Peso aumentado para colonia
+				},
+				{
+					name: "d_code",
+					weight: 5, // Peso aumentado para colonia
+				},
+			],
+			includeScore: true,
+			shouldSort: true,
+			useExtendedSearch: true,
+			minMatchCharLength: 3, // Reducir para permitir coincidencias más flexibles
+			threshold: 0.3,
+		});
+
+		let $or = [];
+
+		if (colony) {
+			$or.push({
+				d_asenta: colony,
+			});
+		}
+
+		if (tipe_asenta) {
+			$or.push({
+				d_tipo_asenta: tipe_asenta,
+			});
+		}
+
+		if (code) {
+			$or.push({
+				d_code: code,
+			});
+		}
+
+		const possibleAddresses = fuseAddress.search({
+			$or: $or,
+		});
+
+		const VALID_SCORE_THRESHOLD = 0.2; // Ajustar según necesidades
+
+		const validAddresses = possibleAddresses
+			.filter((a) => a.score! <= VALID_SCORE_THRESHOLD)
+			.sort((a, b) => a.score! - b.score!);
+
+		return validAddresses.map((a) => ({
+			muni: a.item.d_muni,
+			city: a.item.d_ciud,
+			code: Number(a.item.d_code),
+			colony: a.item.d_asenta,
+			state: a.item.d_esta,
+			id: a.item.id,
+			d_tipo_asent: a.item.d_tipo_asenta,
+		}));
+	}
 
 	return results.map((a) => ({
 		muni: a.d_muni,
