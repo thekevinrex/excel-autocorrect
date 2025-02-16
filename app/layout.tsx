@@ -25,7 +25,7 @@ export default function RootLayout({
 			<body className={`${fontSans.className} antialiased`}>
 				{children}
 
-				<Toaster />
+				<Toaster position="top-center" />
 			</body>
 		</html>
 	);
