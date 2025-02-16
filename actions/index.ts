@@ -372,7 +372,8 @@ export async function proccess_row(
 
 	const validAddresses = possibleAddresses
 		.filter((a) => a.score! <= VALID_SCORE_THRESHOLD)
-		.sort((a, b) => a.score! - b.score!);
+		.sort((a, b) => a.score! - b.score!)
+		.slice(0, 50);
 
 	let errors: Array<string> = [];
 
