@@ -52,7 +52,7 @@ export type ResultType = {
 };
 
 const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
-	const [result, setResult] = React.useState<ResultType | null | boolean>(null);
+	const [result, setResult] = React.useState<ResultType | null>(null);
 	const [selected, setSelected] = React.useState<number | null>(null);
 	const [saving, setSaving] = React.useState(false);
 	const [skip, setSkip] = React.useState(false);
@@ -101,7 +101,14 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 			setShow(result.posible);
 			setSelected(result.posible.length > 0 ? result.posible[0].id : null);
 		} catch (e) {
-			setResult(false);
+			setResult({
+				status: "ERROR",
+				equals: [],
+				errors: [],
+				posible: [],
+			});
+
+			setShow([]);
 
 			toast.error("Lo sentimos ha ocurrido un error al cargar los resultados");
 		}
@@ -139,36 +146,6 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 
 	if (result === null) {
 		return "Cargando resultados...";
-	}
-
-	if (typeof result === "boolean") {
-		return (
-			<>
-				<Alert variant={"destructive"}>
-					<AlertTitle className="font-semibold text-base">
-						Problemas al cargar los resultados
-					</AlertTitle>
-					<AlertDescription>
-						Se detectaron problemas y no se pudo procesar la fila
-					</AlertDescription>
-				</Alert>
-
-				<form
-					action={handleSkip}
-					className="flex flex-row items-center gap-5 justify-end"
-				>
-					<Button variant={"destructive"} disabled={skip || saving}>
-						{skip ? (
-							<>
-								<Loader2 /> Saltando...
-							</>
-						) : (
-							"Saltar"
-						)}
-					</Button>
-				</form>
-			</>
-		);
 	}
 
 	const handleSubmit = async () => {

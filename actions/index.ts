@@ -159,10 +159,10 @@ export async function save_result(
 		create: {
 			excel_id,
 
-			code: row_selected?.d_code ? Number(row_selected.d_code) : row.code,
-			city: row_selected?.d_muni ? row_selected.d_muni : row.city,
-			colony: row_selected?.d_asenta ? row_selected.d_asenta : row.colony,
-			state: row_selected?.d_esta ? row_selected.d_esta : row.state,
+			code: row_selected?.d_code ? Number(row_selected.d_code) : row?.code || 0,
+			city: row_selected?.d_muni ? row_selected.d_muni : `${row.city}`,
+			colony: row_selected?.d_asenta ? row_selected.d_asenta : `${row.colony}`,
+			state: row_selected?.d_esta ? row_selected.d_esta : `${row.state}`,
 			row: row_num,
 			status: isReapeated ? "EQUAL" : status,
 
@@ -176,10 +176,10 @@ export async function save_result(
 			rowData: row.row,
 		},
 		update: {
-			code: row_selected?.d_code ? Number(row_selected.d_code) : row.code,
-			city: row_selected?.d_muni ? row_selected.d_muni : row.city,
-			colony: row_selected?.d_asenta ? row_selected.d_asenta : row.colony,
-			state: row_selected?.d_esta ? row_selected.d_esta : row.state,
+			code: row_selected?.d_code ? Number(row_selected.d_code) : row?.code || 0,
+			city: row_selected?.d_muni ? row_selected.d_muni : `${row.city}`,
+			colony: row_selected?.d_asenta ? row_selected.d_asenta : `${row.colony}`,
+			state: row_selected?.d_esta ? row_selected.d_esta : `${row.state}`,
 
 			status: isReapeated ? "EQUAL" : status,
 
@@ -239,10 +239,10 @@ export async function skip_result(
 		create: {
 			excel_id,
 
-			code: row.code,
-			city: row.city,
-			colony: row.colony,
-			state: row.state,
+			code: row?.code || 0,
+			city: `${row.city}`,
+			colony: `${row.colony}`,
+			state: `${row.state}`,
 			row: row_num,
 			status: isReapeated ? "EQUAL" : "SKIP",
 
