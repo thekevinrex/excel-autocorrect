@@ -177,10 +177,11 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 			});
 
 			setPos(pos + 1);
+			setSaving(false);
 		} catch {
+			setSaving(false);
 			toast.error("Lo sentimos ha ocurrido un error al guardar el resultado");
 		} finally {
-			setSaving(false);
 		}
 	};
 
@@ -200,10 +201,10 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 			);
 
 			setShow(result);
-		} catch {
-			toast.error("Lo sentimos ha ocurrido un error al buscar");
-		} finally {
 			setSearch(false);
+		} catch {
+			setSearch(false);
+			toast.error("Lo sentimos ha ocurrido un error al buscar");
 		}
 	};
 

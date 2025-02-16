@@ -538,8 +538,7 @@ export async function search_results(
 			includeScore: true,
 			shouldSort: true,
 			useExtendedSearch: true,
-			minMatchCharLength: 3, // Reducir para permitir coincidencias más flexibles
-			threshold: 0.3,
+			threshold: 0.5,
 		});
 
 		let $or = [];
