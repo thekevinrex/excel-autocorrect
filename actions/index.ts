@@ -373,12 +373,12 @@ export async function proccess_row(
 	const validAddresses = possibleAddresses
 		.filter((a) => a.score! <= VALID_SCORE_THRESHOLD)
 		.sort((a, b) => a.score! - b.score!)
-		.slice(0, 50);
+		.slice(0, 100);
 
 	let errors: Array<string> = [];
 
 	if (!validAddresses.some((a) => a.item.d_code === `${row.code}`)) {
-		errors.push("El codigo puede que este mal");
+		errors.push("El código puede que este mal");
 	}
 
 	if (!validAddresses.some((a) => a.item.d_muni === row.city)) {

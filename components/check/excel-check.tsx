@@ -15,12 +15,13 @@ import {
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
 import { Button } from "../ui/button";
-import { Loader2, MapPin } from "lucide-react";
+import { Filter, Loader2, MapPin } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { Input } from "../ui/input";
 import ExcelEquals from "./excel-equals";
 import { formatExcel, toExcel } from "@/lib/utils";
 import Link from "next/link";
+import { Label } from "../ui/label";
 
 type Props = {
 	excel: Excel;
@@ -49,7 +50,18 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 	const [selected, setSelected] = React.useState<number | null>(null);
 	const [saving, setSaving] = React.useState(false);
 	const [skip, setSkip] = React.useState(false);
-	const [search, setSearch] = React.useState("");
+
+	const [filters, setFilters] = React.useState<{
+		search: string;
+		colony: string;
+		code: string;
+		advanced: boolean;
+	}>({
+		code: "",
+		colony: "",
+		search: "",
+		advanced: false,
+	});
 
 	React.useMemo(async () => {
 		try {
@@ -95,7 +107,13 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 
 			toast.success("Fila guardada correctamente");
 
-			setSearch("");
+			setFilters({
+				code: "",
+				colony: "",
+				search: "",
+				advanced: false,
+			});
+
 			setPos(pos + 1);
 		} catch {
 			toast.error("Lo sentimos ha ocurrido un error al guardar el resultado");
@@ -118,7 +136,13 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 
 			toast.success("Fila saltada correctamente");
 
-			setSearch("");
+			setFilters({
+				code: "",
+				colony: "",
+				search: "",
+				advanced: false,
+			});
+
 			setPos(pos + 1);
 		} catch {
 			toast.error("Lo sentimos ha ocurrido un error al saltar la fila");
@@ -170,14 +194,64 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 
 			{result.posible && result.posible.length > 0 && (
 				<Card className="flex flex-col w-full ">
-					<CardHeader>
-						<div>
+					<CardHeader className="flex flex-col gap-5">
+						<div className="flex items-center gap-5">
 							<Input
-								value={search}
+								value={filters.search}
 								placeholder="Buscar entre los resultados..."
-								onChange={(e) => setSearch(e.target.value)}
+								onChange={(e) =>
+									setFilters({
+										...filters,
+										search: e.target.value,
+									})
+								}
 							/>
+
+							<Button
+								onClick={() => {
+									setFilters({
+										...filters,
+										advanced: !filters.advanced,
+									});
+								}}
+								size={"icon"}
+								className="shrink-0"
+								variant={"outline"}
+							>
+								<Filter />
+							</Button>
 						</div>
+
+						{filters.advanced && (
+							<div className="w-full flex flex-col md:flex-row items-center gap-5">
+								<Label className="w-full">
+									Buscar colonia
+									<Input
+										value={filters.colony}
+										placeholder="Buscar colonia..."
+										onChange={(e) =>
+											setFilters({
+												...filters,
+												colony: e.target.value,
+											})
+										}
+									/>
+								</Label>
+								<Label className="w-full">
+									Buscar código
+									<Input
+										value={filters.code}
+										placeholder="Buscar código..."
+										onChange={(e) =>
+											setFilters({
+												...filters,
+												code: e.target.value,
+											})
+										}
+									/>
+								</Label>
+							</div>
+						)}
 					</CardHeader>
 					<div className="max-h-[500px] overflow-y-auto">
 						<Table>
@@ -195,19 +269,44 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 							<TableBody>
 								{result.posible
 									.filter((r) => {
-										if (search === "") {
+										if (filters.search === "" && !filters.advanced) {
 											return true;
 										}
+
 										return (
-											r.colony.toLowerCase().includes(search.toLowerCase()) ||
-											r.city.toLowerCase().includes(search.toLowerCase()) ||
-											r.state.toLowerCase().includes(search.toLowerCase()) ||
-											r.muni.toLowerCase().includes(search.toLowerCase()) ||
+											r.colony
+												.toLowerCase()
+												.includes(filters.search.toLowerCase()) ||
+											r.city
+												.toLowerCase()
+												.includes(filters.search.toLowerCase()) ||
+											r.state
+												.toLowerCase()
+												.includes(filters.search.toLowerCase()) ||
+											r.muni
+												.toLowerCase()
+												.includes(filters.search.toLowerCase()) ||
 											r.code
 												.toString()
 												.toLowerCase()
-												.includes(search.toLowerCase())
+												.includes(filters.search.toLowerCase())
 										);
+									})
+									.filter((r) => {
+										if (!filters.advanced || filters.colony === "") {
+											return true;
+										}
+
+										return r.colony
+											.toLowerCase()
+											.includes(filters.colony.toLowerCase());
+									})
+									.filter((r) => {
+										if (!filters.advanced || filters.code === "") {
+											return true;
+										}
+
+										return r.code === parseInt(filters.code);
 									})
 									.map((r, i) => (
 										<TableRow key={i}>
