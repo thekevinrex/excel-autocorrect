@@ -1,4 +1,4 @@
-import { proccess_row, save_result } from "@/actions";
+import { proccess_row, save_result, skip_result } from "@/actions";
 import { AddressType, DataType } from "@/app/(app)/check/[excel]/check";
 import { Excel, ExcelResult, ResultStatus } from "@prisma/client";
 import React from "react";
@@ -48,6 +48,7 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 	const [result, setResult] = React.useState<ResultType | null>(null);
 	const [selected, setSelected] = React.useState<number | null>(null);
 	const [saving, setSaving] = React.useState(false);
+	const [skip, setSkip] = React.useState(false);
 	const [search, setSearch] = React.useState("");
 
 	React.useMemo(async () => {
@@ -100,6 +101,29 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 			toast.error("Lo sentimos ha ocurrido un error al guardar el resultado");
 		} finally {
 			setSaving(false);
+		}
+	};
+
+	const handleSkip = async () => {
+		const row = data?.[pos];
+
+		if (!row) {
+			return;
+		}
+
+		try {
+			setSkip(true);
+
+			await skip_result(excel.id, pos, row);
+
+			toast.success("Fila saltada correctamente");
+
+			setSearch("");
+			setPos(pos + 1);
+		} catch {
+			toast.error("Lo sentimos ha ocurrido un error al saltar la fila");
+		} finally {
+			setSkip(false);
 		}
 	};
 
@@ -248,6 +272,20 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 						</>
 					) : (
 						"Modificar"
+					)}
+				</Button>
+				<Button
+					type="button"
+					onClick={handleSkip}
+					variant={"destructive"}
+					disabled={skip || saving}
+				>
+					{skip ? (
+						<>
+							<Loader2 /> Saltando...
+						</>
+					) : (
+						"Saltar"
 					)}
 				</Button>
 			</form>

@@ -192,6 +192,54 @@ export async function save_result(
 	revalidatePath("/upload");
 }
 
+export async function skip_result(
+	excel_id: number,
+	row_num: number,
+	row: DataType
+) {
+	await db.excelResult.upsert({
+		where: {
+			excel_id_row: {
+				excel_id,
+				row: row_num,
+			},
+		},
+		create: {
+			excel_id,
+
+			code: row.code,
+			city: row.city,
+			colony: row.colony,
+			state: row.state,
+			status: "SKIP",
+			row: row_num,
+
+			name: `${row.name}`,
+			phone: `${row.phone}`,
+
+			rowData: row.row,
+		},
+		update: {
+			code: row.code,
+			city: row.city,
+			colony: row.colony,
+			state: row.state,
+			status: "SKIP",
+		},
+	});
+
+	await db.excel.update({
+		where: {
+			id: excel_id,
+		},
+		data: {
+			last: row_num,
+		},
+	});
+
+	revalidatePath("/upload");
+}
+
 export async function proccess_row(
 	excel_id: number,
 	row: DataType
@@ -444,6 +492,9 @@ export async function export_excel(excel_id: number) {
 				case "OK":
 					// blue en rgb
 					color = "22d3ee"; // "blue" en RGB
+					break;
+				case "SKIP":
+					color = null;
 					break;
 				default:
 					color = "22d3ee"; // "red" en RGB

@@ -10,6 +10,9 @@ import {
 	TableRow,
 } from "../ui/table";
 import { DataType } from "@/app/(app)/check/[excel]/check";
+import { Button } from "../ui/button";
+import Link from "next/link";
+import { MapPin } from "lucide-react";
 
 type Props = {
 	pos: number;
@@ -42,6 +45,7 @@ const ExcelTable = ({ data, pos }: Props) => {
 						<TableHead>Ciudad</TableHead>
 						<TableHead>Estado</TableHead>
 						<TableHead>Código postal</TableHead>
+						<TableHead></TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -54,6 +58,17 @@ const ExcelTable = ({ data, pos }: Props) => {
 						<TableCell>{row.city}</TableCell>
 						<TableCell>{row.state}</TableCell>
 						<TableCell>{row.code}</TableCell>
+						<TableCell>
+							<Button variant={"outline"} size={"icon"} asChild>
+								<Link
+									href={`https://www.google.com/maps/search/?api=1&query=${row.colony},${row.city},${row.state},${row.code}`}
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									<MapPin />
+								</Link>
+							</Button>
+						</TableCell>
 					</TableRow>
 				</TableBody>
 			</Table>

@@ -27,13 +27,15 @@ const ExportExcel = ({ excel }: Props) => {
 		data.forEach((item, rowIndex) => {
 			const row = worksheet.addRow(Object.values(item.row)); // Agregar fila con los valores
 
-			// Aplicar color a la segunda columna (índice 2)
-			const cell = row.getCell(2); // La segunda columna es el índice 2
-			cell.fill = {
-				type: "pattern",
-				pattern: "solid",
-				fgColor: { argb: item.color.replace("#", "") }, // Convertir color a formato ARGB
-			};
+			if (item.color) {
+				// Aplicar color a la segunda columna (índice 2)
+				const cell = row.getCell(2); // La segunda columna es el índice 2
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					fgColor: { argb: item.color.replace("#", "") }, // Convertir color a formato ARGB
+				};
+			}
 
 			row.eachCell((cell) => {
 				cell.font = {
