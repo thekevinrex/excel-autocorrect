@@ -126,23 +126,28 @@ export async function save_result(
 		},
 	});
 
-	const isReapeated = await db.excelResult.findFirst({
-		where: {
-			OR: [
-				{
-					name: {
-						equals: `${row.name}`,
-						mode: "insensitive",
-					},
-				},
-				{
-					phone: `${row.phone}`,
-				},
-			],
+	const isReapeated =
+		row.name || row.phone
+			? await db.excelResult.findFirst({
+					where: {
+						OR: [
+							{
+								name: row.name
+									? {
+											equals: `${row.name}`,
+											mode: "insensitive",
+									  }
+									: undefined,
+							},
+							{
+								phone: row.phone ? `${row.phone}` : undefined,
+							},
+						],
 
-			excel_id: excel_id,
-		},
-	});
+						excel_id: excel_id,
+					},
+			  })
+			: null;
 
 	await db.excelResult.upsert({
 		where: {
@@ -165,8 +170,8 @@ export async function save_result(
 				? isReapeated?.equal_to || isReapeated.id
 				: undefined,
 
-			name: `${row.name}`,
-			phone: `${row.phone}`,
+			name: row.name ? `${row.name}` : undefined,
+			phone: row.phone ? `${row.phone}` : undefined,
 
 			rowData: row.row,
 		},
@@ -214,8 +219,8 @@ export async function skip_result(
 			status: "SKIP",
 			row: row_num,
 
-			name: `${row.name}`,
-			phone: `${row.phone}`,
+			name: row.name ? `${row.name}` : undefined,
+			phone: row.phone ? `${row.phone}` : undefined,
 
 			rowData: row.row,
 		},
@@ -267,23 +272,28 @@ export async function proccess_row(
 	});
 
 	//  Verify repeated
-	const repeated = await db.excelResult.findFirst({
-		where: {
-			excel_id: excel_id,
+	const repeated =
+		row.phone || row.name
+			? await db.excelResult.findFirst({
+					where: {
+						excel_id: excel_id,
 
-			OR: [
-				{
-					name: {
-						equals: `${row.name}`,
-						mode: "insensitive",
+						OR: [
+							{
+								name: row.name
+									? {
+											equals: `${row.name}`,
+											mode: "insensitive",
+									  }
+									: undefined,
+							},
+							{
+								phone: row.phone ? `${row.phone}` : undefined,
+							},
+						],
 					},
-				},
-				{
-					phone: `${row.phone}`,
-				},
-			],
-		},
-	});
+			  })
+			: null;
 
 	if (correct) {
 		return {
