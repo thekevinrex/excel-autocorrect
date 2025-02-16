@@ -25,7 +25,9 @@ const ExportExcel = ({ excel }: Props) => {
 
 		// Agregar los datos a la hoja
 		data.forEach((item, rowIndex) => {
-			const row = worksheet.addRow(Object.values(item.row)); // Agregar fila con los valores
+			const row = worksheet.addRow(
+				Object.keys(item.row).map((k) => item.row[k] || " - ")
+			); // Agregar fila con los valores
 
 			if (item.color) {
 				// Aplicar color a la segunda columna (índice 2)

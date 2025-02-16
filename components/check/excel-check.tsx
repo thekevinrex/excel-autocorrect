@@ -1,33 +1,39 @@
-import { proccess_row, save_result, skip_result } from "@/actions";
+import {
+	proccess_row,
+	save_result,
+	search_results,
+	skip_result,
+} from "@/actions";
 import { AddressType, DataType } from "@/app/(app)/check/[excel]/check";
 import { Excel, ExcelResult, ResultStatus } from "@prisma/client";
 import React from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "../ui/table";
+
+import Link from "next/link";
 import { Card, CardHeader, CardTitle } from "../ui/card";
-import { Checkbox } from "../ui/checkbox";
 import { Button } from "../ui/button";
-import { Filter, Loader2, MapPin } from "lucide-react";
-import { ScrollArea } from "../ui/scroll-area";
+import { Filter, Loader2, MapPin, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
 import ExcelEquals from "./excel-equals";
 import { formatExcel, toExcel } from "@/lib/utils";
-import Link from "next/link";
 import { Label } from "../ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../ui/select";
+import ResultTable from "../result-table";
 
 type Props = {
 	excel: Excel;
 	data: DataType[];
 	pos: number;
 	setPos: (pos: number) => void;
+
+	tipos: Array<string>;
 };
 
 export type ResultType = {
@@ -39,26 +45,39 @@ export type ResultType = {
 		{
 			id: number;
 			muni: string;
+			d_tipo_asent: string;
 		} & AddressType
 	>;
 
 	equals: ExcelResult[];
 };
 
-const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
+const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 	const [result, setResult] = React.useState<ResultType | null>(null);
 	const [selected, setSelected] = React.useState<number | null>(null);
 	const [saving, setSaving] = React.useState(false);
 	const [skip, setSkip] = React.useState(false);
+	const [show, setShow] = React.useState<
+		Array<
+			{
+				id: number;
+				muni: string;
+				d_tipo_asent: string;
+			} & AddressType
+		>
+	>([]);
 
+	const [search, setSearch] = React.useState(false);
 	const [filters, setFilters] = React.useState<{
 		search: string;
 		colony: string;
+		asenta: string;
 		code: string;
 		advanced: boolean;
 	}>({
 		code: "",
 		colony: "",
+		asenta: "",
 		search: "",
 		advanced: false,
 	});
@@ -74,9 +93,13 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 				return;
 			}
 
-			const result = await proccess_row(excel.id, row);
+			const result = await proccess_row(excel.id, {
+				...row,
+				row: "",
+			});
 
 			setResult(result);
+			setShow(result.posible);
 			setSelected(result.posible.length > 0 ? result.posible[0].id : null);
 		} catch (e) {
 			toast.error("Lo sentimos ha ocurrido un error al cargar los resultados");
@@ -105,12 +128,13 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 				selected || undefined
 			);
 
-			toast.success("Fila guardada correctamente");
+			toast.success("Fila modificada correctamente");
 
 			setFilters({
 				code: "",
 				colony: "",
 				search: "",
+				asenta: "",
 				advanced: false,
 			});
 
@@ -140,6 +164,7 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 				code: "",
 				colony: "",
 				search: "",
+				asenta: "",
 				advanced: false,
 			});
 
@@ -148,6 +173,29 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 			toast.error("Lo sentimos ha ocurrido un error al saltar la fila");
 		} finally {
 			setSkip(false);
+		}
+	};
+
+	const handleAdvancedSearch = async () => {
+		if (!filters.colony && !filters.asenta && !filters.code) {
+			setShow(result.posible);
+			return;
+		}
+
+		try {
+			setSearch(true);
+
+			const result = await search_results(
+				filters.colony,
+				filters.asenta,
+				filters.code
+			);
+
+			setShow(result);
+		} catch {
+			toast.error("Lo sentimos ha ocurrido un error al buscar");
+		} finally {
+			setSearch(false);
 		}
 	};
 
@@ -223,7 +271,10 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 						</div>
 
 						{filters.advanced && (
-							<div className="w-full flex flex-col md:flex-row items-center gap-5">
+							<form
+								action={handleAdvancedSearch}
+								className="w-full flex flex-col md:flex-row items-end gap-5"
+							>
 								<Label className="w-full">
 									Buscar colonia
 									<Input
@@ -238,6 +289,25 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 									/>
 								</Label>
 								<Label className="w-full">
+									Tipo de asentamiento
+									<Select
+										value={filters.asenta}
+										onValueChange={(v) => setFilters({ ...filters, asenta: v })}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Tipo de asentamiento" />
+										</SelectTrigger>
+										<SelectContent>
+											{tipos.map((t, i) => (
+												<SelectItem key={i} value={t}>
+													{t}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</Label>
+
+								<Label className="w-full">
 									Buscar código
 									<Input
 										value={filters.code}
@@ -250,99 +320,57 @@ const ExcelCheck = ({ data, pos, setPos, excel }: Props) => {
 										}
 									/>
 								</Label>
-							</div>
+
+								<Button
+									size={"icon"}
+									onClick={() => {
+										setFilters({
+											...filters,
+											code: "",
+											colony: "",
+											asenta: "",
+										});
+										setShow(result.posible);
+									}}
+									className="shrink-0"
+									variant={"outline"}
+									type="button"
+								>
+									<Trash2 />
+								</Button>
+
+								<Button disabled={search}>
+									{search ? (
+										<>
+											<Loader2 /> Buscando...
+										</>
+									) : (
+										"Buscar"
+									)}
+								</Button>
+							</form>
 						)}
 					</CardHeader>
-					<div className="max-h-[500px] overflow-y-auto">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead></TableHead>
-									<TableHead>Colonia</TableHead>
-									<TableHead>Municipio</TableHead>
-									<TableHead>Estado</TableHead>
-									<TableHead>Código</TableHead>
-									<TableHead>Ciudad</TableHead>
-									<TableHead></TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{result.posible
-									.filter((r) => {
-										if (filters.search === "" && !filters.advanced) {
-											return true;
-										}
+					<ResultTable
+						show={show.filter((r) => {
+							if (filters.search === "") {
+								return true;
+							}
 
-										return (
-											r.colony
-												.toLowerCase()
-												.includes(filters.search.toLowerCase()) ||
-											r.city
-												.toLowerCase()
-												.includes(filters.search.toLowerCase()) ||
-											r.state
-												.toLowerCase()
-												.includes(filters.search.toLowerCase()) ||
-											r.muni
-												.toLowerCase()
-												.includes(filters.search.toLowerCase()) ||
-											r.code
-												.toString()
-												.toLowerCase()
-												.includes(filters.search.toLowerCase())
-										);
-									})
-									.filter((r) => {
-										if (!filters.advanced || filters.colony === "") {
-											return true;
-										}
-
-										return r.colony
-											.toLowerCase()
-											.includes(filters.colony.toLowerCase());
-									})
-									.filter((r) => {
-										if (!filters.advanced || filters.code === "") {
-											return true;
-										}
-
-										return r.code === parseInt(filters.code);
-									})
-									.map((r, i) => (
-										<TableRow key={i}>
-											<TableCell>
-												<Checkbox
-													checked={selected === r.id}
-													onCheckedChange={(checked) => {
-														if (checked) {
-															setSelected(r.id);
-														} else {
-															setSelected(null);
-														}
-													}}
-												/>
-											</TableCell>
-											<TableCell>{r.colony}</TableCell>
-											<TableCell>{r.muni}</TableCell>
-											<TableCell>{r.state}</TableCell>
-											<TableCell>{r.code}</TableCell>
-											<TableCell>{r.city ? r.city : "-"}</TableCell>
-											<TableCell>
-												<Button variant={"outline"} size={"icon"} asChild>
-													<Link
-														href={`https://www.google.com/maps/search/?api=1&query=${r.colony},${r.muni},${r.state},${r.code}`}
-														target="_blank"
-														rel="noopener noreferrer"
-													>
-														<MapPin />
-													</Link>
-												</Button>
-											</TableCell>
-										</TableRow>
-									))}
-							</TableBody>
-						</Table>
-					</div>
+							return (
+								r.colony.toLowerCase().includes(filters.search.toLowerCase()) ||
+								r.city.toLowerCase().includes(filters.search.toLowerCase()) ||
+								r.state.toLowerCase().includes(filters.search.toLowerCase()) ||
+								r.muni.toLowerCase().includes(filters.search.toLowerCase()) ||
+								r.code
+									.toString()
+									.toLowerCase()
+									.includes(filters.search.toLowerCase())
+							);
+						})}
+						selected={selected}
+						setSelected={setSelected}
+					/>
 				</Card>
 			)}
 

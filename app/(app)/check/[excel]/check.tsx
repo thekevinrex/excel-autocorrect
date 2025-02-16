@@ -12,6 +12,8 @@ import ExportExcel from "./export-excel";
 
 type Props = {
 	excel: Excel;
+
+	tipos: Array<string>;
 };
 
 export type DataType = {
@@ -31,7 +33,7 @@ export type AddressType = {
 	code: number;
 };
 
-const Check = ({ excel }: Props) => {
+const Check = ({ excel, tipos }: Props) => {
 	const [data, setData] = React.useState<DataType[] | null>(null);
 	const [pos, setPos] = React.useState<number>(excel.last + 1);
 
@@ -39,16 +41,21 @@ const Check = ({ excel }: Props) => {
 		try {
 			const response = await fetch(excel.excel_url);
 			const arrayBuffer = await response.arrayBuffer();
-
-			const workbook = XLSX.read(arrayBuffer, { type: "array" });
+			const workbook = XLSX.read(arrayBuffer, {
+				type: "array",
+			});
 
 			const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
 
 			const datosJson = XLSX.utils.sheet_to_json(primeraHoja, {
 				header: "A",
+				blankrows: true,
+				defval: null, // This will ensure empty fields are included in the JSON
 			});
 
 			const range = datosJson.slice(excel.from, excel.to);
+
+			console.log(range);
 
 			setData(formatExcel(range, excel.type));
 		} catch (error) {
@@ -68,7 +75,13 @@ const Check = ({ excel }: Props) => {
 		<>
 			<ExcelTable data={data} pos={pos} setPos={setPos} />
 
-			<ExcelCheck excel={excel} data={data} pos={pos} setPos={setPos} />
+			<ExcelCheck
+				tipos={tipos}
+				excel={excel}
+				data={data}
+				pos={pos}
+				setPos={setPos}
+			/>
 		</>
 	);
 };

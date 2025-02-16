@@ -300,6 +300,7 @@ export async function proccess_row(
 					city: correct.d_ciud,
 					state: correct.d_esta,
 					colony: correct.d_asenta,
+					d_tipo_asent: correct.d_tipo_asenta,
 				},
 			],
 		};
@@ -438,8 +439,49 @@ export async function proccess_row(
 			colony: a.item.d_asenta,
 			state: a.item.d_esta,
 			id: a.item.id,
+			d_tipo_asent: a.item.d_tipo_asenta,
 		})),
 	};
+}
+
+export async function search_results(
+	colony: string,
+	tipe_asenta: string,
+	code: string
+) {
+	if (!colony && !tipe_asenta && !code) {
+		return [];
+	}
+
+	const results = await db.address.findMany({
+		where: {
+			d_asenta: colony
+				? {
+						contains: colony,
+						mode: "insensitive",
+				  }
+				: undefined,
+
+			d_tipo_asenta: tipe_asenta
+				? {
+						contains: tipe_asenta,
+						mode: "insensitive",
+				  }
+				: undefined,
+
+			d_code: code ? code : undefined,
+		},
+	});
+
+	return results.map((a) => ({
+		muni: a.d_muni,
+		city: a.d_ciud,
+		code: Number(a.d_code),
+		colony: a.d_asenta,
+		state: a.d_esta,
+		id: a.id,
+		d_tipo_asent: a.d_tipo_asenta,
+	}));
 }
 
 export async function export_excel(excel_id: number) {
@@ -509,4 +551,16 @@ export async function export_excel(excel_id: number) {
 			color,
 		};
 	});
+}
+
+export async function getAllTipoAsent() {
+	const results = await db.address.findMany({
+		select: {
+			d_tipo_asenta: true,
+		},
+	});
+
+	const unique = [...new Set(results.map((r) => r.d_tipo_asenta))];
+
+	return unique.filter(Boolean);
 }
