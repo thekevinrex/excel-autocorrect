@@ -25,6 +25,7 @@ import {
 	SelectValue,
 } from "../ui/select";
 import ResultTable from "../result-table";
+import ExportButton from "../export-button";
 
 type Props = {
 	excel: Excel;
@@ -401,6 +402,12 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 				action={handleSubmit}
 				className="flex flex-row items-center gap-5 justify-end"
 			>
+				<ExportButton
+					excel={excel}
+					variant={{
+						variant: "secondary",
+					}}
+				/>
 				<Button disabled={saving || !selected}>
 					{saving ? (
 						<>
