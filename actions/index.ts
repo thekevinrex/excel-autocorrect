@@ -505,7 +505,8 @@ export async function search_results(
 		const results = await db.address.findMany({
 			where: {
 				d_code: {
-					contains: code,
+					contains: `${code.trim()}`,
+					mode: "insensitive",
 				},
 			},
 		});
