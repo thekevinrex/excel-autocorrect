@@ -40,30 +40,32 @@ const Check = ({ excel, tipos }: Props) => {
 	const [data, setData] = React.useState<DataType[] | null>(null);
 	const [pos, setPos] = React.useState<number>(excel.last + 1);
 
-	React.useMemo(async () => {
-		try {
-			const response = await fetch(excel.excel_url);
-			const arrayBuffer = await response.arrayBuffer();
-			const workbook = XLSX.read(arrayBuffer, {
-				type: "array",
-			});
+	React.useEffect(() => {
+		const get_excel_data = async () => {
+			try {
+				const response = await fetch(excel.excel_url);
+				const arrayBuffer = await response.arrayBuffer();
+				const workbook = XLSX.read(arrayBuffer, {
+					type: "array",
+				});
 
-			const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
+				const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
 
-			const datosJson = XLSX.utils.sheet_to_json(primeraHoja, {
-				header: "A",
-				blankrows: true,
-				defval: null, // This will ensure empty fields are included in the JSON
-			});
+				const datosJson = XLSX.utils.sheet_to_json(primeraHoja, {
+					header: "A",
+					blankrows: true,
+					defval: null, // This will ensure empty fields are included in the JSON
+				});
 
-			const range = datosJson.slice(excel.from, excel.to);
+				const range = datosJson.slice(excel.from, excel.to);
 
-			console.log(range);
+				setData(formatExcel(range, excel.type));
+			} catch (error) {
+				toast.error("Lo sentimos ha ocurrido un error al cargar el excel");
+			}
+		};
 
-			setData(formatExcel(range, excel.type));
-		} catch (error) {
-			toast.error("Lo sentimos ha ocurrido un error al cargar el excel");
-		}
+		get_excel_data();
 	}, [excel]);
 
 	if (!data) {

@@ -57,6 +57,7 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 	const [selected, setSelected] = React.useState<number | null>(null);
 	const [saving, setSaving] = React.useState(false);
 	const [skip, setSkip] = React.useState(false);
+
 	const [show, setShow] = React.useState<
 		Array<
 			{
@@ -82,37 +83,43 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 		advanced: false,
 	});
 
-	React.useMemo(async () => {
-		try {
-			setResult(null);
+	React.useEffect(() => {
+		const fetch_result = async () => {
+			try {
+				setResult(null);
 
-			const row = data?.[pos];
+				const row = data?.[pos];
 
-			if (!row) {
-				toast.error("La fila a procesar es invalida");
-				return;
+				if (!row) {
+					toast.error("La fila a procesar es invalida");
+					return;
+				}
+
+				const result = await proccess_row(excel.id, {
+					...row,
+					row: "",
+				});
+
+				setResult(result);
+				setShow(result.posible);
+				setSelected(result.posible.length > 0 ? result.posible[0].id : null);
+			} catch (e) {
+				setResult({
+					status: "ERROR",
+					equals: [],
+					errors: [],
+					posible: [],
+				});
+
+				setShow([]);
+
+				toast.error(
+					"Lo sentimos ha ocurrido un error al cargar los resultados"
+				);
 			}
+		};
 
-			const result = await proccess_row(excel.id, {
-				...row,
-				row: "",
-			});
-
-			setResult(result);
-			setShow(result.posible);
-			setSelected(result.posible.length > 0 ? result.posible[0].id : null);
-		} catch (e) {
-			setResult({
-				status: "ERROR",
-				equals: [],
-				errors: [],
-				posible: [],
-			});
-
-			setShow([]);
-
-			toast.error("Lo sentimos ha ocurrido un error al cargar los resultados");
-		}
+		fetch_result();
 	}, [data, pos]);
 
 	const handleSkip = async () => {
@@ -192,6 +199,10 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 			return;
 		}
 
+		if (search) {
+			return;
+		}
+
 		try {
 			setSearch(true);
 
@@ -202,6 +213,7 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 			);
 
 			setShow(result);
+			setSelected(result.length > 0 ? result[0].id : selected);
 			setSearch(false);
 		} catch {
 			setSearch(false);
@@ -250,139 +262,134 @@ const ExcelCheck = ({ data, pos, setPos, excel, tipos }: Props) => {
 				</Alert>
 			)}
 
-			{result.posible && result.posible.length > 0 && (
-				<Card className="flex flex-col w-full ">
-					<CardHeader className="flex flex-col gap-5">
-						<div className="flex items-center gap-5">
-							<Input
-								value={filters.search}
-								placeholder="Buscar entre los resultados..."
-								onChange={(e) =>
-									setFilters({
-										...filters,
-										search: e.target.value,
-									})
-								}
-							/>
+			<Card className="flex flex-col w-full ">
+				<CardHeader className="flex flex-col gap-5">
+					<div className="flex items-center gap-5">
+						<Input
+							value={filters.search}
+							placeholder="Buscar entre los resultados..."
+							onChange={(e) =>
+								setFilters({
+									...filters,
+									search: e.target.value,
+								})
+							}
+						/>
+
+						<Button
+							onClick={() => {
+								setFilters({
+									...filters,
+									advanced: !filters.advanced,
+								});
+							}}
+							size={"icon"}
+							className="shrink-0"
+							variant={"outline"}
+						>
+							<Filter />
+						</Button>
+					</div>
+
+					{filters.advanced && (
+						<div className="w-full flex flex-col md:flex-row items-end gap-5">
+							<Label className="w-full">
+								Buscar colonia
+								<Input
+									value={filters.colony}
+									placeholder="Buscar colonia..."
+									onChange={(e) =>
+										setFilters({
+											...filters,
+											colony: e.target.value,
+										})
+									}
+								/>
+							</Label>
+							<Label className="w-full">
+								Tipo de asentamiento
+								<Select
+									value={filters.asenta}
+									onValueChange={(v) => setFilters({ ...filters, asenta: v })}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="Tipo de asentamiento" />
+									</SelectTrigger>
+									<SelectContent>
+										{tipos.map((t, i) => (
+											<SelectItem key={i} value={t}>
+												{t}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</Label>
+
+							<Label className="w-full">
+								Buscar código
+								<Input
+									value={filters.code}
+									placeholder="Buscar código..."
+									onChange={(e) =>
+										setFilters({
+											...filters,
+											code: e.target.value,
+										})
+									}
+								/>
+							</Label>
 
 							<Button
+								size={"icon"}
 								onClick={() => {
 									setFilters({
 										...filters,
-										advanced: !filters.advanced,
+										code: "",
+										colony: "",
+										asenta: "",
 									});
+									setShow(result.posible);
 								}}
-								size={"icon"}
 								className="shrink-0"
 								variant={"outline"}
+								type="button"
 							>
-								<Filter />
+								<Trash2 />
+							</Button>
+
+							<Button onClick={() => handleAdvancedSearch()} disabled={search}>
+								{search ? (
+									<>
+										<Loader2 className="animate-spin" /> Buscando...
+									</>
+								) : (
+									"Buscar"
+								)}
 							</Button>
 						</div>
+					)}
+				</CardHeader>
+				<ResultTable
+					show={show.filter((r) => {
+						if (filters.search === "") {
+							return true;
+						}
 
-						{filters.advanced && (
-							<form
-								action={handleAdvancedSearch}
-								className="w-full flex flex-col md:flex-row items-end gap-5"
-							>
-								<Label className="w-full">
-									Buscar colonia
-									<Input
-										value={filters.colony}
-										placeholder="Buscar colonia..."
-										onChange={(e) =>
-											setFilters({
-												...filters,
-												colony: e.target.value,
-											})
-										}
-									/>
-								</Label>
-								<Label className="w-full">
-									Tipo de asentamiento
-									<Select
-										value={filters.asenta}
-										onValueChange={(v) => setFilters({ ...filters, asenta: v })}
-									>
-										<SelectTrigger>
-											<SelectValue placeholder="Tipo de asentamiento" />
-										</SelectTrigger>
-										<SelectContent>
-											{tipos.map((t, i) => (
-												<SelectItem key={i} value={t}>
-													{t}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</Label>
-
-								<Label className="w-full">
-									Buscar código
-									<Input
-										value={filters.code}
-										placeholder="Buscar código..."
-										onChange={(e) =>
-											setFilters({
-												...filters,
-												code: e.target.value,
-											})
-										}
-									/>
-								</Label>
-
-								<Button
-									size={"icon"}
-									onClick={() => {
-										setFilters({
-											...filters,
-											code: "",
-											colony: "",
-											asenta: "",
-										});
-										setShow(result.posible);
-									}}
-									className="shrink-0"
-									variant={"outline"}
-									type="button"
-								>
-									<Trash2 />
-								</Button>
-
-								<Button disabled={search}>
-									{search ? (
-										<>
-											<Loader2 /> Buscando...
-										</>
-									) : (
-										"Buscar"
-									)}
-								</Button>
-							</form>
-						)}
-					</CardHeader>
-					<ResultTable
-						show={show.filter((r) => {
-							if (filters.search === "") {
-								return true;
-							}
-
-							return (
-								r.colony.toLowerCase().includes(filters.search.toLowerCase()) ||
-								r.city.toLowerCase().includes(filters.search.toLowerCase()) ||
-								r.state.toLowerCase().includes(filters.search.toLowerCase()) ||
-								r.muni.toLowerCase().includes(filters.search.toLowerCase()) ||
-								r.code
-									.toString()
-									.toLowerCase()
-									.includes(filters.search.toLowerCase())
-							);
-						})}
-						selected={selected}
-						setSelected={setSelected}
-					/>
-				</Card>
-			)}
+						return (
+							r.colony.toLowerCase().includes(filters.search.toLowerCase()) ||
+							r.city.toLowerCase().includes(filters.search.toLowerCase()) ||
+							r.state.toLowerCase().includes(filters.search.toLowerCase()) ||
+							r.muni.toLowerCase().includes(filters.search.toLowerCase()) ||
+							r.code
+								.toString()
+								.toLowerCase()
+								.includes(filters.search.toLowerCase())
+						);
+					})}
+					selected={selected}
+					setSelected={setSelected}
+				/>
+			</Card>
 
 			{result.equals && result.equals.length > 0 && (
 				<Card className="flex flex-col w-full ">
