@@ -598,7 +598,7 @@ export async function search_results(
 	}
 
 	const possibleAddresses = fuseAddress.search({
-		$or: $or,
+		$and: $or,
 	});
 
 	const validAddresses = possibleAddresses.sort((a, b) => a.score! - b.score!);
