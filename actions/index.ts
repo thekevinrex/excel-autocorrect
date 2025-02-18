@@ -1,11 +1,9 @@
 "use server";
 
-import { DataType } from "@/app/(app)/check/[excel]/check";
 import { ResultType } from "@/components/check/excel-check";
 import db from "@/lib/db";
 import { formatExcel, toExcel, verifyModified } from "@/lib/utils";
 import { ExcelType, ResultStatus } from "@prisma/client";
-import { UTApi } from "uploadthing/server";
 
 import Fuse from "fuse.js";
 import { revalidatePath } from "next/cache";
