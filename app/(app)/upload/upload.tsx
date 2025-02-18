@@ -5,17 +5,13 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UploadDBExcel from "@/components/upload-db-excel";
-import { UploadDropzone } from "@/lib/uploadthings";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { Excel, ExcelType } from "@prisma/client";
+import UploadExcel from "@/components/upload-excel";
 
 const Upload = ({ last_update }: { last_update?: Date }) => {
-	const router = useRouter();
-
 	const [mounted, setMounted] = React.useState(false);
 	const [type, setType] = React.useState<ExcelType>("TIPE_1");
 
@@ -104,23 +100,7 @@ const Upload = ({ last_update }: { last_update?: Date }) => {
 				</CardContent>
 
 				<CardContent className="">
-					<UploadDropzone
-						className="max-h-96"
-						input={{
-							from: limits.from,
-							to: limits.to,
-							type: type,
-						}}
-						onUploadError={(e) => {
-							toast.error(e.message);
-						}}
-						onClientUploadComplete={(data) => {
-							router.push(`/check/${data[0].serverData.id}`);
-
-							toast.success("Excel subido correctamente");
-						}}
-						endpoint={"uploadExcel"}
-					/>
+					<UploadExcel from={limits.from} type={type} to={limits.to} />
 				</CardContent>
 			</Card>
 		</Tabs>

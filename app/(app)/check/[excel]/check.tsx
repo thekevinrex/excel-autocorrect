@@ -7,11 +7,13 @@ import React from "react";
 import ExcelTable from "@/components/check/excel-table";
 import { formatExcel } from "@/lib/utils";
 import { toast } from "sonner";
-import ExcelCheck from "@/components/check/excel-check";
+import ExcelCheck, { ResultType } from "@/components/check/excel-check";
 import ExportExcel from "./export-excel";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { proccess_row } from "@/actions";
+import { useRouter } from "next/navigation";
 
 type Props = {
 	excel: Excel;
@@ -23,7 +25,10 @@ export type DataType = {
 	num: number;
 	name: string;
 	phone: string;
+
 	address: string;
+	reference: string;
+
 	local: number;
 
 	row: any;
@@ -37,43 +42,44 @@ export type AddressType = {
 };
 
 const Check = ({ excel, tipos }: Props) => {
-	const [data, setData] = React.useState<DataType[] | null>(null);
 	const [pos, setPos] = React.useState<number>(excel.last + 1);
+	const [result, setResult] = React.useState<ResultType | null>(null);
+	const [verify, setVerify] = React.useState(false);
+
+	const router = useRouter();
 
 	React.useEffect(() => {
-		const get_excel_data = async () => {
+		const fetch_result = async () => {
 			try {
-				const response = await fetch(excel.excel_url);
-				const arrayBuffer = await response.arrayBuffer();
-				const workbook = XLSX.read(arrayBuffer, {
-					type: "array",
-				});
+				setResult(null);
 
-				const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
+				if (pos >= excel.total) {
+					return;
+				}
 
-				const datosJson = XLSX.utils.sheet_to_json(primeraHoja, {
-					header: "A",
-					blankrows: true,
-					defval: null, // This will ensure empty fields are included in the JSON
-				});
+				const result = await proccess_row(excel.id, pos);
 
-				const range = datosJson.slice(excel.from, excel.to);
+				setResult(result);
 
-				setData(formatExcel(range, excel.type));
-			} catch (error) {
-				toast.error("Lo sentimos ha ocurrido un error al cargar el excel");
+				setVerify(result.equals && result.equals.length > 0 ? true : false);
+			} catch (e) {
+				toast.error(
+					"Lo sentimos ha ocurrido un error al cargar los resultados"
+				);
+
+				router.push("/upload");
 			}
 		};
 
-		get_excel_data();
-	}, [excel]);
+		fetch_result();
+	}, [excel, pos]);
 
-	if (!data) {
-		return "Cargando...";
+	if (pos >= excel.total) {
+		return <ExportExcel excel={excel} />;
 	}
 
-	if (pos >= data.length) {
-		return <ExportExcel excel={excel} />;
+	if (!result) {
+		return "Cargando resultados...";
 	}
 
 	return (
@@ -86,12 +92,13 @@ const Check = ({ excel, tipos }: Props) => {
 					</Link>
 				</Button>
 			</div>
-			<ExcelTable data={data} pos={pos} setPos={setPos} />
+
+			<ExcelTable excel={excel} pos={pos} rowData={result.row} />
 
 			<ExcelCheck
 				tipos={tipos}
 				excel={excel}
-				data={data}
+				result={result}
 				pos={pos}
 				setPos={setPos}
 			/>

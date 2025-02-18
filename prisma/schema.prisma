@@ -16,19 +16,15 @@ datasource db {
 model Excel {
   id  Int @id @default(autoincrement())
 
-  excel_url   String
   excel_size  Float?
   excel_name  String?
-  excel_id    String?
   type        ExcelType
   
-
   from   Int
   to     Int
 
   last   Int @default(0)
-
-  finish Boolean @default(false)
+  total  Int @default(0)
 
   createdAt  DateTime @default(now())
 }
@@ -41,6 +37,9 @@ model ExcelResult {
 
   name     String?
   phone    String?
+
+  address   String?
+  reference String?
 
   equal_to Int?
   equal ExcelResult? @relation("Equal", fields: [equal_to], references: [id])
@@ -70,6 +69,7 @@ enum ResultStatus {
   EQUAL
   ERROR
   SKIP
+  PENDING
 }
 
 

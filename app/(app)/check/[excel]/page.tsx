@@ -3,6 +3,7 @@ import Container from "@/components/container";
 import React from "react";
 import Check from "./check";
 import { notFound } from "next/navigation";
+import ExportExcel from "./export-excel";
 
 type Props = {
 	params: {
@@ -21,7 +22,11 @@ const CheckPage = async ({ params: { excel } }: Props) => {
 
 	return (
 		<Container>
-			<Check excel={e} tipos={tipo_asent} />
+			{e.last + 1 >= e.total ? (
+				<ExportExcel excel={e} />
+			) : (
+				<Check excel={e} tipos={tipo_asent} />
+			)}
 		</Container>
 	);
 };

@@ -3,8 +3,8 @@
 import { DataType } from "@/app/(app)/check/[excel]/check";
 import { ResultType } from "@/components/check/excel-check";
 import db from "@/lib/db";
-import { toExcel, verifyModified } from "@/lib/utils";
-import { ResultStatus } from "@prisma/client";
+import { formatExcel, toExcel, verifyModified } from "@/lib/utils";
+import { ExcelType, ResultStatus } from "@prisma/client";
 import { UTApi } from "uploadthing/server";
 
 import Fuse from "fuse.js";
@@ -79,12 +79,6 @@ export async function deleteExcel(excel: number) {
 		},
 	});
 
-	if (e.excel_id) {
-		const utapi = new UTApi();
-
-		await utapi.deleteFiles([e.excel_id]);
-	}
-
 	revalidatePath("/upload");
 }
 
@@ -109,11 +103,83 @@ export async function getAllExcels() {
 	return e;
 }
 
+export async function uploadExcel(
+	file: {
+		name: string;
+		size: number;
+	},
+
+	excel: {
+		from: number;
+		to: number;
+		type: ExcelType;
+	},
+
+	range: any
+) {
+	const data = formatExcel(JSON.parse(range), excel.type);
+
+	const newE = await db.excel.create({
+		data: {
+			from: excel.from,
+			to: excel.to,
+			type: excel.type,
+			last: -1,
+			total: data.length,
+
+			excel_name: file.name,
+			excel_size: file.size,
+		},
+	});
+
+	await db.excelResult.createMany({
+		data: data.map((d, i) => ({
+			excel_id: newE.id,
+
+			row: i,
+			status: "PENDING",
+
+			code: d?.code ? Number(d?.code) : 0,
+			city: `${d?.city}`,
+			colony: `${d?.colony}`,
+			state: `${d?.state}`,
+
+			name: d.name ? `${d.name}` : undefined,
+			phone: d.phone ? `${d.phone}` : undefined,
+
+			address: d.address,
+			reference: d.reference,
+
+			rowData: d.row,
+		})),
+	});
+
+	return newE;
+}
+
+export async function update_row(
+	id: number,
+
+	address: string,
+	reference: string
+) {
+	await db.excelResult.update({
+		where: {
+			id,
+		},
+		data: {
+			address,
+			reference,
+		},
+	});
+
+	revalidatePath(`/check/${id}`);
+}
+
 export async function save_result(
 	excel_id: number,
-	status: ResultStatus,
 	row_num: number,
-	row: DataType,
+	status: ResultStatus,
 	selected?: number
 ) {
 	if (!selected) {
@@ -126,70 +192,24 @@ export async function save_result(
 		},
 	});
 
-	const isReapeated =
-		row.name || row.phone
-			? await db.excelResult.findFirst({
-					where: {
-						OR: [
-							{
-								name: row.name
-									? {
-											equals: `${row.name}`,
-											mode: "insensitive",
-									  }
-									: undefined,
-							},
-							{
-								phone: row.phone ? `${row.phone}` : undefined,
-							},
-						],
+	if (!row_selected) {
+		throw new Error("No se encontro la direccion seleccionada");
+	}
 
-						excel_id: excel_id,
-					},
-			  })
-			: null;
-
-	await db.excelResult.upsert({
+	await db.excelResult.update({
 		where: {
 			excel_id_row: {
 				excel_id,
 				row: row_num,
 			},
 		},
-		create: {
-			excel_id,
+		data: {
+			code: row_selected?.d_code ? Number(row_selected.d_code) : undefined,
+			city: row_selected?.d_muni ? row_selected.d_muni : undefined,
+			colony: row_selected?.d_asenta ? row_selected.d_asenta : undefined,
+			state: row_selected?.d_esta ? row_selected.d_esta : undefined,
 
-			code: row_selected?.d_code
-				? Number(row_selected.d_code)
-				: Number(row?.code) || 0,
-			city: row_selected?.d_muni ? row_selected.d_muni : `${row.city}`,
-			colony: row_selected?.d_asenta ? row_selected.d_asenta : `${row.colony}`,
-			state: row_selected?.d_esta ? row_selected.d_esta : `${row.state}`,
-			row: row_num,
-			status: isReapeated ? "EQUAL" : status,
-
-			equal_to: isReapeated
-				? isReapeated?.equal_to || isReapeated.id
-				: undefined,
-
-			name: row.name ? `${row.name}` : undefined,
-			phone: row.phone ? `${row.phone}` : undefined,
-
-			rowData: row.row,
-		},
-		update: {
-			code: row_selected?.d_code
-				? Number(row_selected.d_code)
-				: Number(row?.code) || 0,
-			city: row_selected?.d_muni ? row_selected.d_muni : `${row.city}`,
-			colony: row_selected?.d_asenta ? row_selected.d_asenta : `${row.colony}`,
-			state: row_selected?.d_esta ? row_selected.d_esta : `${row.state}`,
-
-			status: isReapeated ? "EQUAL" : status,
-
-			equal_to: isReapeated
-				? isReapeated?.equal_to || isReapeated.id
-				: undefined,
+			status: status,
 		},
 	});
 
@@ -205,70 +225,65 @@ export async function save_result(
 	revalidatePath("/upload");
 }
 
-export async function skip_result(
+export async function duplicated_result(
 	excel_id: number,
 	row_num: number,
-	row: DataType
+	selected?: number
 ) {
-	const isReapeated =
-		row.name || row.phone
-			? await db.excelResult.findFirst({
-					where: {
-						OR: [
-							{
-								name: row.name
-									? {
-											equals: `${row.name}`,
-											mode: "insensitive",
-									  }
-									: undefined,
-							},
-							{
-								phone: row.phone ? `${row.phone}` : undefined,
-							},
-						],
+	if (!selected) {
+		throw new Error("No se selecciono una direccion valida");
+	}
 
-						excel_id: excel_id,
-					},
-			  })
-			: null;
+	const row_selected = await db.excelResult.findFirst({
+		where: {
+			id: selected,
+		},
+	});
 
-	await db.excelResult.upsert({
+	if (!row_selected) {
+		throw new Error("No se encontro la direccion seleccionada");
+	}
+
+	await db.excelResult.update({
 		where: {
 			excel_id_row: {
 				excel_id,
 				row: row_num,
 			},
 		},
-		create: {
-			excel_id,
+		data: {
+			code: row_selected.code,
+			city: row_selected.city,
+			colony: row_selected.colony,
+			state: row_selected.state,
 
-			code: Number(row?.code) || 0,
-			city: `${row.city}`,
-			colony: `${row.colony}`,
-			state: `${row.state}`,
-			row: row_num,
-			status: isReapeated ? "EQUAL" : "SKIP",
-
-			equal_to: isReapeated
-				? isReapeated?.equal_to || isReapeated.id
-				: undefined,
-
-			name: row.name ? `${row.name}` : undefined,
-			phone: row.phone ? `${row.phone}` : undefined,
-
-			rowData: row.row,
+			equal_to: row_selected.id,
+			status: "EQUAL",
 		},
-		update: {
-			code: Number(row?.code),
-			city: `${row.city}`,
-			colony: `${row.colony}`,
-			state: `${row.state}`,
-			status: isReapeated ? "EQUAL" : "SKIP",
+	});
 
-			equal_to: isReapeated
-				? isReapeated?.equal_to || isReapeated.id
-				: undefined,
+	await db.excel.update({
+		where: {
+			id: excel_id,
+		},
+		data: {
+			last: row_num,
+		},
+	});
+
+	revalidatePath("/upload");
+}
+
+export async function skip_result(excel_id: number, row_num: number) {
+	await db.excelResult.update({
+		where: {
+			excel_id_row: {
+				excel_id,
+				row: row_num,
+			},
+		},
+		data: {
+			status: "SKIP",
 		},
 	});
 
@@ -286,9 +301,20 @@ export async function skip_result(
 
 export async function proccess_row(
 	excel_id: number,
-	row: DataType
+	num: number
 ): Promise<ResultType> {
 	// Verify if the row is correct
+	const row = await db.excelResult.findFirst({
+		where: {
+			excel_id,
+			row: num,
+		},
+	});
+
+	if (!row) {
+		throw new Error("Fila no encontrada");
+	}
+
 	const correct = await db.address.findFirst({
 		where: {
 			d_code: `${row.code}`,
@@ -316,6 +342,9 @@ export async function proccess_row(
 			? await db.excelResult.findFirst({
 					where: {
 						excel_id: excel_id,
+						status: {
+							not: "PENDING",
+						},
 
 						OR: [
 							{
@@ -336,7 +365,8 @@ export async function proccess_row(
 
 	if (correct) {
 		return {
-			status: repeated ? "EQUAL" : "OK",
+			status: "OK",
+			row,
 
 			errors: [],
 			equals: repeated ? [repeated] : [],
@@ -445,6 +475,10 @@ export async function proccess_row(
 	const prev_results = await db.excelResult.findMany({
 		where: {
 			excel_id: excel_id,
+
+			status: {
+				not: "PENDING",
+			},
 		},
 	});
 
@@ -468,14 +502,10 @@ export async function proccess_row(
 		],
 	});
 
-	if (possibleEqual.length > 0) {
-		errors.push("El nombre o telefono puede que este repetido");
-	}
-
-	// 5. Resultado final con sugerencias priorizadas
 	return {
 		status: errors.length > 0 ? "ERROR" : "OK",
 		errors,
+		row,
 
 		equals: possibleEqual.map((p) => p.item),
 
@@ -539,7 +569,7 @@ export async function search_results(
 		shouldSort: true,
 		useExtendedSearch: true,
 		minMatchCharLength: 3, // Reducir para permitir coincidencias más flexibles
-		threshold: 0.5,
+		threshold: 0.6,
 	});
 
 	let $or = [];
@@ -587,6 +617,10 @@ export async function export_excel(excel_id: number) {
 	const results = await db.excelResult.findMany({
 		where: {
 			excel_id,
+
+			status: {
+				not: "PENDING",
+			},
 		},
 	});
 
