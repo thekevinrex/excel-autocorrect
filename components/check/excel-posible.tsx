@@ -47,6 +47,9 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 		result.posible && result.posible.length > 0 ? result.posible[0].id : null
 	);
 
+	const [page, setPage] = React.useState(1);
+	const [perPage, setPerPage] = React.useState(25);
+
 	const [show, setShow] = React.useState<
 		Array<
 			{
@@ -77,6 +80,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 	const handleSkip = async () => {
 		try {
 			setSkip(true);
+			setPage(1);
 
 			await skip_result(excel.id, pos);
 
@@ -102,6 +106,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 	const handleSubmit = async () => {
 		try {
 			setSaving(true);
+			setPage(1);
 
 			await save_result(excel.id, pos, result.status, selected || undefined);
 
@@ -126,8 +131,10 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 	};
 
 	const handleAdvancedSearch = async () => {
+		setPage(1);
+
 		if (!filters.colony && !filters.asenta && !filters.code && !filters.state) {
-			setShow(result.posible);
+			setShow([...result.posible]);
 			return;
 		}
 
@@ -316,7 +323,11 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 						</div>
 					)}
 				</CardHeader>
+
 				<ResultTable
+					page={page}
+					setPage={setPage}
+					perPage={perPage}
 					show={show.filter((r) => {
 						if (filters.search === "") {
 							return true;

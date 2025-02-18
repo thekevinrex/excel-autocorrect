@@ -11,6 +11,10 @@ type Props = {
 	}>;
 	selected: number | null;
 	setSelected: (selected: number | null) => void;
+
+	page: number;
+	setPage: (page: number) => void;
+	perPage: number;
 };
 
 import {
@@ -34,10 +38,14 @@ import {
 } from "./ui/pagination";
 import { CardFooter } from "./ui/card";
 
-const ResultTable = ({ selected, setSelected, show }: Props) => {
-	const [page, setPage] = React.useState(1);
-	const [perPage, setPerPage] = React.useState(25);
-
+const ResultTable = ({
+	selected,
+	setSelected,
+	show,
+	page,
+	setPage,
+	perPage,
+}: Props) => {
 	const pages = Math.ceil(show.length / perPage);
 
 	const start = (page - 1) * perPage;
