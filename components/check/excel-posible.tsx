@@ -64,11 +64,13 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 		asenta: string;
 		code: string;
 		advanced: boolean;
+		state: string;
 	}>({
 		code: "",
 		colony: "",
 		asenta: "",
 		search: "",
+		state: "",
 		advanced: false,
 	});
 
@@ -85,6 +87,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 				colony: "",
 				search: "",
 				asenta: "",
+				state: "",
 				advanced: false,
 			});
 
@@ -109,6 +112,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 				colony: "",
 				search: "",
 				asenta: "",
+				state: "",
 				advanced: false,
 			});
 
@@ -137,7 +141,8 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 			const result = await search_results(
 				filters.colony,
 				filters.asenta,
-				filters.code
+				filters.code,
+				filters.state
 			);
 
 			setShow(result);
@@ -251,6 +256,20 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 										))}
 									</SelectContent>
 								</Select>
+							</Label>
+
+							<Label className="w-full">
+								Buscar estado
+								<Input
+									value={filters.state}
+									placeholder="Buscar estado..."
+									onChange={(e) =>
+										setFilters({
+											...filters,
+											state: e.target.value,
+										})
+									}
+								/>
 							</Label>
 
 							<Label className="w-full">

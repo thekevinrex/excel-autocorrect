@@ -525,7 +525,8 @@ export async function proccess_row(
 export async function search_results(
 	colony: string,
 	tipe_asenta: string,
-	code: string
+	code: string,
+	state: string
 ) {
 	if (!colony && !tipe_asenta && !code) {
 		return [];
@@ -564,6 +565,10 @@ export async function search_results(
 				name: "d_tipo_asenta",
 				weight: 5, // Peso aumentado para colonia
 			},
+			{
+				name: "d_esta",
+				weight: 5, // Peso aumentado para colonia
+			},
 		],
 		includeScore: true,
 		shouldSort: true,
@@ -583,6 +588,12 @@ export async function search_results(
 	if (tipe_asenta) {
 		$or.push({
 			d_tipo_asenta: tipe_asenta,
+		});
+	}
+
+	if (state) {
+		$or.push({
+			d_esta: state,
 		});
 	}
 
