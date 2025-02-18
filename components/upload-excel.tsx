@@ -4,7 +4,7 @@ import { Input } from "./ui/input";
 
 import * as XLSX from "xlsx";
 import { Loader2 } from "lucide-react";
-import { prepareStateData, updateStateData, uploadExcel } from "@/actions";
+import { uploadExcel } from "@/actions";
 import { toast } from "sonner";
 import { ExcelType } from "@prisma/client";
 import { useRouter } from "next/navigation";

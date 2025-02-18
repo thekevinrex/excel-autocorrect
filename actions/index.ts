@@ -152,6 +152,8 @@ export async function uploadExcel(
 		})),
 	});
 
+	revalidatePath("/upload");
+
 	return newE;
 }
 
@@ -526,7 +528,7 @@ export async function search_results(
 	code: string,
 	state: string
 ) {
-	if (!colony && !tipe_asenta && !code) {
+	if (!colony && !tipe_asenta && !code && !state) {
 		return [];
 	}
 

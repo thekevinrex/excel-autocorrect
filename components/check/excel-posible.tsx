@@ -126,7 +126,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 	};
 
 	const handleAdvancedSearch = async () => {
-		if (!filters.colony && !filters.asenta && !filters.code) {
+		if (!filters.colony && !filters.asenta && !filters.code && !filters.state) {
 			setShow(result.posible);
 			return;
 		}
