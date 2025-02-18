@@ -6,11 +6,11 @@ type Props = {
 		colony: string;
 		muni: string;
 		state: string;
-		code: number;
+		code: string;
 		city: string;
 	}>;
-	selected: number | null;
-	setSelected: (selected: number | null) => void;
+	selected?: number | null;
+	setSelected?: (selected: number | null) => void;
 
 	page: number;
 	setPage: (page: number) => void;
@@ -28,7 +28,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "./ui/button";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { Copy, MapPin } from "lucide-react";
 import {
 	Pagination,
 	PaginationContent,
@@ -37,6 +37,7 @@ import {
 	PaginationPrevious,
 } from "./ui/pagination";
 import { CardFooter } from "./ui/card";
+import { copy } from "@/lib/utils";
 
 const ResultTable = ({
 	selected,
@@ -59,7 +60,7 @@ const ResultTable = ({
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead></TableHead>
+							{setSelected && <TableHead></TableHead>}
 							<TableHead>Colonia</TableHead>
 							<TableHead>Municipio</TableHead>
 							<TableHead>Estado</TableHead>
@@ -72,18 +73,20 @@ const ResultTable = ({
 						{show.length > 0 ? (
 							show.map((r, i) => (
 								<TableRow key={i}>
-									<TableCell>
-										<Checkbox
-											checked={selected === r.id}
-											onCheckedChange={(checked) => {
-												if (checked) {
-													setSelected(r.id);
-												} else {
-													setSelected(null);
-												}
-											}}
-										/>
-									</TableCell>
+									{setSelected && (
+										<TableCell>
+											<Checkbox
+												checked={selected === r.id}
+												onCheckedChange={(checked) => {
+													if (checked) {
+														setSelected(r.id);
+													} else {
+														setSelected(null);
+													}
+												}}
+											/>
+										</TableCell>
+									)}
 									<TableCell>{r.colony}</TableCell>
 									<TableCell>{r.muni}</TableCell>
 									<TableCell>{r.state}</TableCell>
@@ -98,6 +101,20 @@ const ResultTable = ({
 											>
 												<MapPin />
 											</Link>
+										</Button>
+
+										<Button
+											onClick={() =>
+												copy(
+													`${r.colony},${r.city},${r.state},${r.code}`,
+													"Dirección copiada correctamente"
+												)
+											}
+											size={"icon"}
+											variant={"outline"}
+											className="mx-2"
+										>
+											<Copy />
 										</Button>
 									</TableCell>
 								</TableRow>

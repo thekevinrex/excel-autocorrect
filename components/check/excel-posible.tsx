@@ -103,12 +103,12 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 		}
 	};
 
-	const handleSubmit = async () => {
+	const handleSubmit = async (status: ResultStatus) => {
 		try {
 			setSaving(true);
 			setPage(1);
 
-			await save_result(excel.id, pos, result.status, selected || undefined);
+			await save_result(excel.id, pos, status, selected || undefined);
 
 			toast.success("Fila modificada correctamente");
 
@@ -360,15 +360,6 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 				</div>
 
 				<div className="flex flex-row gap-5 items-center justify-end">
-					<Button onClick={handleSubmit} disabled={saving || !selected}>
-						{saving ? (
-							<>
-								<Loader2 /> Modificando...
-							</>
-						) : (
-							"Modificar"
-						)}
-					</Button>
 					<Button
 						type="button"
 						onClick={handleSkip}
@@ -377,10 +368,37 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 					>
 						{skip ? (
 							<>
-								<Loader2 /> Saltando...
+								<Loader2 /> Guardando...
 							</>
 						) : (
-							"Saltar"
+							"Incorrecto"
+						)}
+					</Button>
+
+					<Button
+						onClick={() => handleSubmit("ERROR")}
+						disabled={saving || !selected}
+						variant={"secondary"}
+					>
+						{saving ? (
+							<>
+								<Loader2 /> Guardando...
+							</>
+						) : (
+							"Parcialmente"
+						)}
+					</Button>
+
+					<Button
+						onClick={() => handleSubmit("OK")}
+						disabled={saving || !selected}
+					>
+						{saving ? (
+							<>
+								<Loader2 /> Guardando...
+							</>
+						) : (
+							"Correcto"
 						)}
 					</Button>
 				</div>

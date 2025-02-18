@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteExcel } from "@/actions";
+import ExportButton from "@/components/export-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -44,7 +45,7 @@ const PrevExcels = ({ excels }: Props) => {
 					<div className="text-sm text-muted-foreground">
 						{`${formatSize(
 							excels.reduce((acc, e) => acc + (e?.excel_size || 0), 0)
-						)} / ${formatSize(parseFloat(MAX_UPLOADS as any))}`}
+						)}`}
 					</div>
 				</div>
 			</CardHeader>
@@ -79,6 +80,12 @@ const PrevExcels = ({ excels }: Props) => {
 										<Button asChild>
 											<Link href={`/check/${e.id}`}>Continuar</Link>
 										</Button>
+										<ExportButton
+											excel={e}
+											variant={{
+												variant: "secondary",
+											}}
+										/>
 										<Button
 											onClick={() => handleDelete(e.id)}
 											variant={"destructive"}

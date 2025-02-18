@@ -33,6 +33,15 @@ const ExportButton = ({ excel, variant: { variant } }: Props) => {
 					pattern: "solid",
 					fgColor: { argb: item.color.replace("#", "") }, // Convertir color a formato ARGB
 				};
+
+				if (item.status === "SKIP" || item.status === "OK") {
+					const cell = row.getCell(3); // La segunda columna es el índice 2
+					cell.fill = {
+						type: "pattern",
+						pattern: "solid",
+						fgColor: { argb: item.color.replace("#", "") }, // Convertir color a formato ARGB
+					};
+				}
 			}
 
 			row.eachCell((cell) => {

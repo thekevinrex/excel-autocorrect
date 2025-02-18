@@ -40,15 +40,16 @@ model ExcelResult {
 
   address   String?
   reference String?
+  local     String?
 
   equal_to Int?
   equal ExcelResult? @relation("Equal", fields: [equal_to], references: [id])
   equalResults ExcelResult[] @relation("Equal")
   
-  colony String
-	city String
-	state String
-	code Int
+  colony String?
+	city String?
+	state String?
+	code String?
 
   rowData  Json
 

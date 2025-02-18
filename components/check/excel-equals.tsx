@@ -64,6 +64,7 @@ const ExcelEquals = ({ equals, excel, setPos, pos, setVerify }: Props) => {
 							<TableHead></TableHead>
 							<TableHead>Número de pedido</TableHead>
 							<TableHead>Nombre del cliente</TableHead>
+							<TableHead>Telefono</TableHead>
 							<TableHead>Dirección</TableHead>
 							<TableHead>Número de local</TableHead>
 							<TableHead>Colonia</TableHead>
@@ -94,6 +95,7 @@ const ExcelEquals = ({ equals, excel, setPos, pos, setVerify }: Props) => {
 									</TableCell>
 									<TableCell>{row.data[0].num}</TableCell>
 									<TableCell>{row.data[0].name}</TableCell>
+									<TableCell>{row.data[0].phone}</TableCell>
 									<TableCell>{row.data[0].address}</TableCell>
 									<TableCell>{row.data[0].local}</TableCell>
 									<TableCell>{row.data[0].colony}</TableCell>

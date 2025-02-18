@@ -29,7 +29,7 @@ export type DataType = {
 	address: string;
 	reference: string;
 
-	local: number;
+	local: string;
 
 	row: any;
 } & AddressType;
@@ -38,7 +38,7 @@ export type AddressType = {
 	colony: string;
 	city: string;
 	state: string;
-	code: number;
+	code: string;
 };
 
 const Check = ({ excel, tipos }: Props) => {

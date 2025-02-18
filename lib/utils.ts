@@ -1,6 +1,7 @@
 import { DataType } from "@/app/(app)/check/[excel]/check";
 import { ExcelResult, ExcelType } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx";
+import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -101,6 +102,8 @@ export function toExcelType1(result: ExcelResult): any {
 		O: result.reference,
 		F: result.address,
 		E: result.name,
+
+		G: result.local,
 	};
 }
 
@@ -116,6 +119,8 @@ export function toExcelType2(result: ExcelResult): any {
 		J: result.reference,
 		E: result.address,
 		G: result.name,
+
+		F: result.local,
 	};
 }
 
@@ -185,4 +190,10 @@ export function verifyModifiedType2(
 	}
 
 	return modified;
+}
+
+export function copy(copy: string, success: string) {
+	navigator.clipboard.writeText(copy);
+
+	toast.success(success);
 }

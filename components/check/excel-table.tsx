@@ -12,9 +12,9 @@ import {
 import { DataType } from "@/app/(app)/check/[excel]/check";
 import { Button } from "../ui/button";
 import Link from "next/link";
-import { Edit, Loader2, MapPin } from "lucide-react";
+import { Copy, Edit, Loader2, MapPin } from "lucide-react";
 import { Excel, ExcelResult } from "@prisma/client";
-import { formatExcel, toExcel } from "@/lib/utils";
+import { copy, formatExcel, toExcel } from "@/lib/utils";
 import { Input } from "../ui/input";
 import { toast } from "sonner";
 import { update_row } from "@/actions";
@@ -36,16 +36,26 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 	const [data, setData] = React.useState<{
 		address: string;
 		reference: string;
+		local: string;
+		code: string;
 	}>({
 		address: row.address,
 		reference: row.reference,
+		code: row.code,
+		local: `${row.local}`,
 	});
 
 	const handleUpdate = async () => {
 		try {
 			setSaving(true);
 
-			await update_row(rowData.id, data.address, data.reference);
+			await update_row(
+				rowData.id,
+				data.address,
+				data.reference,
+				data.local,
+				data.code
+			);
 
 			toast.success("Fila actualizada correctamente");
 
@@ -96,7 +106,7 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 						<TableCell>
 							<div className="flex items-center gap-3">
 								<Button
-									onClick={() => setEdit(true)}
+									onClick={() => setEdit(!edit)}
 									variant={"outline"}
 									size={"icon"}
 								>
@@ -111,6 +121,18 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 										<MapPin />
 									</Link>
 								</Button>
+								<Button
+									onClick={() =>
+										copy(
+											`${row.address}, ${row.local},${row.colony},${row.city},${row.state},${row.code}`,
+											"Dirección copiada correctamente"
+										)
+									}
+									size={"icon"}
+									variant={"outline"}
+								>
+									<Copy />
+								</Button>
 							</div>
 						</TableCell>
 					</TableRow>
@@ -118,9 +140,9 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 			</Table>
 
 			{edit && (
-				<CardContent>
-					<div className="flex flex-row gap-5 mb-5 w-full">
-						<div>
+				<CardContent className="flex flex-col w-full">
+					<div className="flex flex-row justify-evenly gap-5 mb-5 w-full">
+						<div className="w-full">
 							<label>Dirección</label>
 							<Input
 								value={data.address}
@@ -129,7 +151,7 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 								className="input"
 							/>
 						</div>
-						<div>
+						<div className="w-full">
 							<label>Referencia</label>
 							<Input
 								value={data.reference}
@@ -137,6 +159,24 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 									setData({ ...data, reference: e.target.value })
 								}
 								placeholder="Referencia"
+								className="input"
+							/>
+						</div>
+						<div className="w-full">
+							<label>Número local</label>
+							<Input
+								value={data.local}
+								onChange={(e) => setData({ ...data, local: e.target.value })}
+								placeholder="Número local"
+								className="input"
+							/>
+						</div>
+						<div className="w-full">
+							<label>Código</label>
+							<Input
+								value={data.code}
+								onChange={(e) => setData({ ...data, code: e.target.value })}
+								placeholder="Código"
 								className="input"
 							/>
 						</div>

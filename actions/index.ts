@@ -137,16 +137,17 @@ export async function uploadExcel(
 			row: i,
 			status: "PENDING",
 
-			code: d?.code ? Number(d?.code) : 0,
-			city: `${d?.city}`,
-			colony: `${d?.colony}`,
-			state: `${d?.state}`,
+			code: d?.code ? `${d.code}` : undefined,
+			city: d?.city,
+			colony: d?.colony,
+			state: d.state,
 
 			name: d.name ? `${d.name}` : undefined,
 			phone: d.phone ? `${d.phone}` : undefined,
 
 			address: d.address,
 			reference: d.reference,
+			local: d?.local ? `${d.local}` : undefined,
 
 			rowData: d.row,
 		})),
@@ -161,7 +162,9 @@ export async function update_row(
 	id: number,
 
 	address: string,
-	reference: string
+	reference: string,
+	local: string,
+	code: string
 ) {
 	await db.excelResult.update({
 		where: {
@@ -170,6 +173,8 @@ export async function update_row(
 		data: {
 			address,
 			reference,
+			code,
+			local,
 		},
 	});
 
@@ -204,7 +209,7 @@ export async function save_result(
 			},
 		},
 		data: {
-			code: row_selected?.d_code ? Number(row_selected.d_code) : undefined,
+			code: row_selected?.d_code ? row_selected.d_code : undefined,
 			city: row_selected?.d_muni ? row_selected.d_muni : undefined,
 			colony: row_selected?.d_asenta ? row_selected.d_asenta : undefined,
 			state: row_selected?.d_esta ? row_selected.d_esta : undefined,
@@ -374,7 +379,7 @@ export async function proccess_row(
 			posible: [
 				{
 					id: correct.id,
-					code: Number(correct.d_code),
+					code: correct.d_code,
 					muni: correct.d_muni,
 					city: correct.d_ciud,
 					state: correct.d_esta,
@@ -392,7 +397,7 @@ export async function proccess_row(
 		threshold: 0.3,
 	});
 
-	const posible_states = fuse_states.search(row.state);
+	const posible_states = row.state ? fuse_states.search(row.state) : [];
 
 	const address = await db.address.findMany({
 		where: {
@@ -513,7 +518,7 @@ export async function proccess_row(
 			score: a.score,
 			muni: a.item.d_muni,
 			city: a.item.d_ciud,
-			code: Number(a.item.d_code),
+			code: a.item.d_code,
 			colony: a.item.d_asenta,
 			state: a.item.d_esta,
 			id: a.item.id,
@@ -545,7 +550,7 @@ export async function search_results(
 		return results.map((a) => ({
 			muni: a.d_muni,
 			city: a.d_ciud,
-			code: Number(a.d_code),
+			code: a.d_code,
 			colony: a.d_asenta,
 			state: a.d_esta,
 			id: a.id,
@@ -606,7 +611,7 @@ export async function search_results(
 	return validAddresses.map((a) => ({
 		muni: a.item.d_muni,
 		city: a.item.d_ciud,
-		code: Number(a.item.d_code),
+		code: a.item.d_code,
 		colony: a.item.d_asenta,
 		state: a.item.d_esta,
 		id: a.item.id,
@@ -632,6 +637,9 @@ export async function export_excel(excel_id: number) {
 			status: {
 				not: "PENDING",
 			},
+		},
+		orderBy: {
+			row: "asc",
 		},
 	});
 
@@ -667,14 +675,17 @@ export async function export_excel(excel_id: number) {
 		if (!color) {
 			switch (r.status) {
 				case "OK":
-					// blue en rgb
-					color = "22d3ee"; // "blue" en RGB
+					color = "22d3ee";
 					break;
 				case "SKIP":
-					color = null;
+					color = "ef4444";
+					// color = null;
+					break;
+				case "ERROR":
+					color = "22d3ee";
 					break;
 				default:
-					color = "22d3ee"; // "red" en RGB
+					color = "22d3ee";
 					break;
 			}
 		}
@@ -682,6 +693,7 @@ export async function export_excel(excel_id: number) {
 		return {
 			row: toExcel(r, excel.type),
 			modified: verifyModified(r, excel.type),
+			status: r.status,
 			color,
 		};
 	});
