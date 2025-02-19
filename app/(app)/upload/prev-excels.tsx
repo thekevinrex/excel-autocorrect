@@ -78,12 +78,6 @@ const PrevExcels = ({ excels }: Props) => {
 										<Button asChild>
 											<Link href={`/check/${e.id}`}>Continuar</Link>
 										</Button>
-										<ExportButton
-											excel={e}
-											variant={{
-												variant: "secondary",
-											}}
-										/>
 										<Button
 											onClick={() => handleDelete(e.id)}
 											variant={"destructive"}
