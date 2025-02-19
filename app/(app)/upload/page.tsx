@@ -16,6 +16,8 @@ const UploadPage = async () => {
 		<Container>
 			<Upload last_update={last_db_update} />
 
+			<PrevExcels excels={prev_excels} />
+
 			<AdvancedSearch tipos={tipo_asent} />
 		</Container>
 	);
