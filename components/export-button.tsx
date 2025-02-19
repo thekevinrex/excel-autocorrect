@@ -11,8 +11,6 @@ import { VariantProps } from "class-variance-authority";
 type Props = { excel: Excel; variant: VariantProps<typeof buttonVariants> };
 
 const ExportButton = ({ excel, variant: { variant } }: Props) => {
-	const router = useRouter();
-
 	const handleExport = async () => {
 		const data = await export_excel(excel.id);
 
@@ -68,12 +66,8 @@ const ExportButton = ({ excel, variant: { variant } }: Props) => {
 
 		a.click();
 
-		URL.revokeObjectURL(url);
-
 		// Cerrar la ventana
 		toast.success("Exportación exitosa");
-
-		router.push("/upload");
 	};
 
 	return (
