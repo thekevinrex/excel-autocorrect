@@ -3,7 +3,7 @@
 import { deleteExcel } from "@/actions";
 import ExportButton from "@/components/export-button";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Table,
 	TableBody,
@@ -22,8 +22,6 @@ import { toast } from "sonner";
 type Props = {
 	excels: Excel[];
 };
-
-const MAX_UPLOADS = process.env.NEXT_PUBLIC_MAX_UPLOADS_SIZE;
 
 const PrevExcels = ({ excels }: Props) => {
 	const handleDelete = async (id: number) => {

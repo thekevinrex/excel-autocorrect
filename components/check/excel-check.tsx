@@ -1,13 +1,7 @@
-import { proccess_row } from "@/actions";
-import { AddressType, DataType } from "@/app/(app)/check/[excel]/check";
+import { AddressType } from "@/app/(app)/check/[excel]/check";
 import { Excel, ExcelResult, ResultStatus } from "@prisma/client";
 import React from "react";
-import { toast } from "sonner";
-
-import { Card, CardHeader, CardTitle } from "../ui/card";
-
 import ExcelEquals from "./excel-equals";
-import { formatExcel, toExcel } from "@/lib/utils";
 
 import ExcelPosible from "./excel-posible";
 

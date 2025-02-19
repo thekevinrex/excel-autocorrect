@@ -5,18 +5,16 @@ import {
 	search_results,
 	skip_result,
 } from "@/actions";
-import { AddressType, DataType } from "@/app/(app)/check/[excel]/check";
-import { Excel, ExcelResult, ResultStatus } from "@prisma/client";
+import { AddressType } from "@/app/(app)/check/[excel]/check";
+import { Excel, ResultStatus } from "@prisma/client";
 
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
-import { Card, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
-import { Filter, Loader2, MapPin, Trash2 } from "lucide-react";
+import { Filter, Loader2, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
-import ExcelEquals from "./excel-equals";
-import { formatExcel, toExcel } from "@/lib/utils";
 import { Label } from "../ui/label";
 import {
 	Select,

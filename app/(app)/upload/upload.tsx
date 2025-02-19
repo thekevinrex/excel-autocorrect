@@ -8,7 +8,7 @@ import UploadDBExcel from "@/components/upload-db-excel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { Excel, ExcelType } from "@prisma/client";
+import { ExcelType } from "@prisma/client";
 import UploadExcel from "@/components/upload-excel";
 
 const Upload = ({ last_update }: { last_update?: Date }) => {

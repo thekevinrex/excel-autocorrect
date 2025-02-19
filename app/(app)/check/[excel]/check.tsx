@@ -1,11 +1,8 @@
 "use client";
 
-import * as XLSX from "xlsx";
-
 import { Excel } from "@prisma/client";
 import React from "react";
 import ExcelTable from "@/components/check/excel-table";
-import { formatExcel } from "@/lib/utils";
 import { toast } from "sonner";
 import ExcelCheck, { ResultType } from "@/components/check/excel-check";
 import ExportExcel from "./export-excel";
