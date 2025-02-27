@@ -145,8 +145,8 @@ export async function uploadExcel(
 			name: d.name ? `${d.name}` : undefined,
 			phone: d.phone ? `${d.phone}` : undefined,
 
-			address: d.address,
-			reference: d.reference,
+			address: d?.address ? `${d.address}` : undefined,
+			reference: d?.reference ? `${d.reference}` : undefined,
 			local: d?.local ? `${d.local}` : undefined,
 
 			rowData: d.row,
