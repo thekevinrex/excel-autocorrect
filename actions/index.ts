@@ -138,9 +138,9 @@ export async function uploadExcel(
 			status: "PENDING",
 
 			code: d?.code ? `${d.code}` : undefined,
-			city: d?.city,
-			colony: d?.colony,
-			state: d.state,
+			city: d?.city ? `${d.city}` : undefined,
+			colony: d?.colony ? `${d.colony}` : undefined,
+			state: d.state ? `${d.state}` : undefined,
 
 			name: d.name ? `${d.name}` : undefined,
 			phone: d.phone ? `${d.phone}` : undefined,
