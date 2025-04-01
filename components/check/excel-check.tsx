@@ -1,4 +1,4 @@
-import { AddressType } from "@/app/(app)/check/[excel]/check";
+import { AddressType } from "@/app/(app)/(check)/check/[excel]/check";
 import { Excel, ExcelResult, ResultStatus } from "@prisma/client";
 import React from "react";
 import ExcelEquals from "./excel-equals";

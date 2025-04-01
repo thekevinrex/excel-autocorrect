@@ -5,7 +5,7 @@ import {
 	search_results,
 	skip_result,
 } from "@/actions";
-import { AddressType } from "@/app/(app)/check/[excel]/check";
+import { AddressType } from "@/app/(app)/(check)/check/[excel]/check";
 import { Excel, ResultStatus } from "@prisma/client";
 
 import { toast } from "sonner";

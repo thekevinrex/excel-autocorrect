@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AddressType } from "../check/[excel]/check";
+import { AddressType } from "../(check)/check/[excel]/check";
 import { search_results } from "@/actions";
 import { toast } from "sonner";
 import { Card, CardHeader } from "@/components/ui/card";

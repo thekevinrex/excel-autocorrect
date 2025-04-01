@@ -1,4 +1,4 @@
-import { DataType } from "@/app/(app)/check/[excel]/check";
+import { DataType } from "@/app/(app)/(check)/check/[excel]/check";
 import { ExcelResult, ExcelType } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx";
 import { toast } from "sonner";

@@ -52,10 +52,10 @@ model ExcelResult {
 	code String?
 
   rowData  Json
+  posibleData Json?
 
   status  ResultStatus @default(OK)
 
-  @@unique([excel_id, row])
 
   resultDate  DateTime @default(now())
 }

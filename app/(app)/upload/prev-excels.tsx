@@ -75,9 +75,15 @@ const PrevExcels = ({ excels }: Props) => {
 								<TableCell>{e.last + 1}</TableCell>
 								<TableCell>
 									<div className="flex items-center gap-3">
-										<Button asChild>
-											<Link href={`/check/${e.id}`}>Continuar</Link>
-										</Button>
+										{e.last === -1 ? (
+											<Button asChild>
+												<Link href={`/pre/${e.id}`}>Iniciar</Link>
+											</Button>
+										) : (
+											<Button asChild>
+												<Link href={`/check/${e.id}`}>Continuar</Link>
+											</Button>
+										)}
 										<Button
 											onClick={() => handleDelete(e.id)}
 											variant={"destructive"}

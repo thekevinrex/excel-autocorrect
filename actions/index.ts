@@ -3,7 +3,7 @@
 import { ResultType } from "@/components/check/excel-check";
 import db from "@/lib/db";
 import { formatExcel, toExcel, verifyModified } from "@/lib/utils";
-import { ExcelType, ResultStatus } from "@prisma/client";
+import { ExcelResult, ExcelType, ResultStatus } from "@prisma/client";
 
 import Fuse from "fuse.js";
 import { revalidatePath } from "next/cache";
@@ -201,12 +201,20 @@ export async function save_result(
 		throw new Error("No se encontro la direccion seleccionada");
 	}
 
+	const row = await db.excelResult.findFirst({
+		where: {
+			excel_id,
+			row: row_num,
+		},
+	});
+
+	if (!row) {
+		throw new Error("Fila no encontrada");
+	}
+
 	await db.excelResult.update({
 		where: {
-			excel_id_row: {
-				excel_id,
-				row: row_num,
-			},
+			id: row.id,
 		},
 		data: {
 			code: row_selected?.d_code ? row_selected.d_code : undefined,
@@ -249,12 +257,20 @@ export async function duplicated_result(
 		throw new Error("No se encontro la direccion seleccionada");
 	}
 
+	const row = await db.excelResult.findFirst({
+		where: {
+			excel_id,
+			row: row_num,
+		},
+	});
+
+	if (!row) {
+		throw new Error("Fila no encontrada");
+	}
+
 	await db.excelResult.update({
 		where: {
-			excel_id_row: {
-				excel_id,
-				row: row_num,
-			},
+			id: row.id,
 		},
 		data: {
 			code: row_selected.code,
@@ -280,12 +296,20 @@ export async function duplicated_result(
 }
 
 export async function skip_result(excel_id: number, row_num: number) {
+	const row = await db.excelResult.findFirst({
+		where: {
+			excel_id,
+			row: row_num,
+		},
+	});
+
+	if (!row) {
+		throw new Error("Fila no encontrada");
+	}
+
 	await db.excelResult.update({
 		where: {
-			excel_id_row: {
-				excel_id,
-				row: row_num,
-			},
+			id: row.id,
 		},
 		data: {
 			status: "SKIP",
@@ -304,22 +328,209 @@ export async function skip_result(excel_id: number, row_num: number) {
 	revalidatePath("/upload");
 }
 
-export async function proccess_row(
+export async function pre_process_rows(
 	excel_id: number,
-	num: number
-): Promise<ResultType> {
-	// Verify if the row is correct
-	const row = await db.excelResult.findFirst({
+	step: "f1" | "f2" | "f3" | "f4"
+) {
+	try {
+		if (step === "f4") {
+			return await pre_f4(excel_id);
+		}
+
+		const rows = await db.excelResult.findMany({
+			where: {
+				excel_id,
+				status: "PENDING",
+
+				posibleData: undefined,
+			},
+		});
+
+		if (step === "f1") {
+			return await pre_f1(excel_id, rows);
+		}
+
+		if (step === "f2") {
+			return await pre_f2(excel_id, rows);
+		}
+
+		if (step === "f3") {
+			return await pre_f3(excel_id, rows);
+		}
+
+		return null;
+	} catch (e) {
+		console.error(e);
+		return null;
+	}
+}
+
+export async function pre_f1(excel_id: number, rows: ExcelResult[]) {
+	let stats = 0;
+
+	for (const row of rows) {
+		const correct = await verify_is_correct(excel_id, row);
+
+		if (correct) {
+			stats++;
+		}
+	}
+
+	return stats;
+}
+
+export async function pre_f2(excel_id: number, rows: ExcelResult[]) {
+	let stats = 0;
+
+	for (const row of rows) {
+		const f2_posibles = await db.address.findMany({
+			where: {
+				d_code: `${row.code}`,
+
+				d_asenta: {
+					equals: `${row.colony}`,
+					mode: "insensitive",
+				},
+			},
+		});
+
+		if (f2_posibles.length > 0) {
+			await db.excelResult.update({
+				where: {
+					id: row.id,
+				},
+				data: {
+					status: "OK",
+
+					code: f2_posibles[0]?.d_code ? f2_posibles[0].d_code : undefined,
+					city: f2_posibles[0]?.d_muni ? f2_posibles[0].d_muni : undefined,
+					colony: f2_posibles[0]?.d_asenta
+						? f2_posibles[0].d_asenta
+						: undefined,
+					state: f2_posibles[0]?.d_esta ? f2_posibles[0].d_esta : undefined,
+				},
+			});
+
+			stats++;
+		}
+	}
+
+	return stats;
+}
+
+export async function pre_f3(excel_id: number, rows: ExcelResult[]) {
+	let stats = 0;
+
+	for (const row of rows) {
+		const f3_posibles = await db.address.findMany({
+			where: {
+				d_code: `${row.code}`,
+
+				d_esta: {
+					contains: `${row.state}`,
+					mode: "insensitive",
+				},
+			},
+		});
+
+		const fuseAddress = new Fuse(f3_posibles, {
+			keys: [
+				{
+					name: "d_esta",
+					weight: 15, // Alto peso para coincidencia de estado
+				},
+				{
+					name: "d_muni",
+					weight: 6, // Ciudad importante pero flexible
+				},
+			],
+			includeScore: true,
+			shouldSort: true,
+			useExtendedSearch: true,
+			minMatchCharLength: 3, // Reducir para permitir coincidencias más flexibles
+			threshold: 0.2,
+		});
+
+		const possibleAddresses = fuseAddress.search({
+			$or: [
+				{
+					d_esta: `${row.state}`,
+				},
+				{
+					d_muni: `${row.city}`,
+				},
+			],
+		});
+
+		if (possibleAddresses.length > 0) {
+			await db.excelResult.update({
+				where: {
+					id: row.id,
+				},
+				data: {
+					status: "PENDING",
+
+					posibleData: possibleAddresses.map((a) => a.item.id),
+				},
+			});
+
+			stats++;
+		}
+	}
+
+	return stats;
+}
+
+export async function pre_f4(excel_id: number) {
+	// Reorganize rows based on the specified criteria
+	const allResults = await db.excelResult.findMany({
 		where: {
 			excel_id,
-			row: num,
+		},
+		orderBy: {
+			row: "asc",
 		},
 	});
 
-	if (!row) {
-		throw new Error("Fila no encontrada");
+	const okResults = allResults.filter((r) => r.status === "OK");
+	const pendingWithPossibleData = allResults.filter(
+		(r) => r.status === "PENDING" && r.posibleData
+	);
+
+	const otherResults = allResults.filter(
+		(r) => r.status !== "OK" && !(r.status === "PENDING" && r.posibleData)
+	);
+
+	const reorderedResults = [
+		...okResults,
+		...pendingWithPossibleData,
+		...otherResults,
+	];
+
+	for (let i = 0; i < reorderedResults.length; i++) {
+		await db.excelResult.update({
+			where: {
+				id: reorderedResults[i].id,
+			},
+			data: {
+				row: i,
+			},
+		});
 	}
 
+	await db.excel.update({
+		where: {
+			id: excel_id,
+		},
+		data: {
+			last: okResults.length - 1,
+		},
+	});
+
+	return allResults.length;
+}
+
+export async function verify_is_correct(excel_id: number, row: ExcelResult) {
 	const correct = await db.address.findFirst({
 		where: {
 			d_code: `${row.code}`,
@@ -369,24 +580,75 @@ export async function proccess_row(
 			: null;
 
 	if (correct) {
+		await db.excelResult.update({
+			where: {
+				id: row.id,
+			},
+			data: {
+				status: "OK",
+				equal_to: repeated ? repeated.id : null,
+			},
+		});
+
+		return true;
+	}
+
+	return false;
+}
+
+export async function proccess_row(
+	excel_id: number,
+	num: number
+): Promise<ResultType> {
+	// Verify if the row is correct
+	const row = await db.excelResult.findFirst({
+		where: {
+			excel_id,
+			row: num,
+		},
+	});
+
+	if (!row) {
+		throw new Error("Fila no encontrada");
+	}
+
+	if (row.status === "OK") {
 		return {
 			status: "OK",
 			row,
 
 			errors: [],
-			equals: repeated ? [repeated] : [],
+			equals: [],
 
-			posible: [
-				{
-					id: correct.id,
-					code: correct.d_code,
-					muni: correct.d_muni,
-					city: correct.d_ciud,
-					state: correct.d_esta,
-					colony: correct.d_asenta,
-					d_tipo_asent: correct.d_tipo_asenta,
+			posible: [],
+		};
+	}
+
+	if (row.posibleData) {
+		const possibleAddresses = await db.address.findMany({
+			where: {
+				id: {
+					in: row.posibleData as Array<number>,
 				},
-			],
+			},
+		});
+
+		return {
+			status: "PENDING",
+			row,
+
+			errors: [],
+			equals: [],
+
+			posible: possibleAddresses.map((a) => ({
+				muni: a.d_muni,
+				city: a.d_ciud,
+				code: a.d_code,
+				colony: a.d_asenta,
+				state: a.d_esta,
+				id: a.id,
+				d_tipo_asent: a.d_tipo_asenta,
+			})),
 		};
 	}
 

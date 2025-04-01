@@ -9,7 +9,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "../ui/table";
-import { DataType } from "@/app/(app)/check/[excel]/check";
+import { DataType } from "@/app/(app)/(check)/check/[excel]/check";
 import { Checkbox } from "../ui/checkbox";
 import { Excel, ExcelResult } from "@prisma/client";
 import { formatExcel, toExcel } from "@/lib/utils";

@@ -64,7 +64,7 @@ const UploadExcel = ({
 
 				toast.success("Excel subido correctamente");
 
-				router.push(`/check/${excel.id}`);
+				router.push(`/pre/${excel.id}`);
 			} catch (e) {
 				toast.error("Lo sentimos ha occurrido un error");
 			} finally {

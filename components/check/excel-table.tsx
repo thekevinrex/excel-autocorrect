@@ -9,7 +9,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "../ui/table";
-import { DataType } from "@/app/(app)/check/[excel]/check";
+import { DataType } from "@/app/(app)/(check)/check/[excel]/check";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { Copy, Edit, Loader2, MapPin } from "lucide-react";
