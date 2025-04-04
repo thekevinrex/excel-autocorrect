@@ -14,8 +14,8 @@ const UploadExcel = ({
 	to,
 	type,
 }: {
-	from: number;
-	to: number;
+	from?: number;
+	to?: number;
 	type: ExcelType;
 }) => {
 	const [status, setStatus] = React.useState<"pending" | "loading">("pending");
@@ -45,7 +45,18 @@ const UploadExcel = ({
 				defval: null, // This will ensure empty fields are included in the JSON
 			});
 
-			const range = datosJson.slice(from, to);
+			let start = from || 0;
+			let end = to || datosJson.length;
+
+			if (end > datosJson.length) {
+				end = datosJson.length;
+			}
+
+			if (start < 0) {
+				start = 0;
+			}
+
+			const range = datosJson.slice(start, end);
 
 			try {
 				const excel = await uploadExcel(
@@ -54,8 +65,8 @@ const UploadExcel = ({
 						size: file!.size,
 					},
 					{
-						from,
-						to,
+						from: start,
+						to: end,
 						type,
 					},
 

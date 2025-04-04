@@ -16,12 +16,9 @@ const Upload = ({ last_update }: { last_update?: Date }) => {
 	const [type, setType] = React.useState<ExcelType>("TIPE_1");
 
 	const [limits, setLimits] = React.useState<{
-		from: number;
-		to: number;
-	}>({
-		from: 0,
-		to: 5,
-	});
+		from?: number;
+		to?: number;
+	}>({});
 
 	React.useEffect(() => {
 		setMounted(true);

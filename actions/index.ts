@@ -652,6 +652,33 @@ export async function proccess_row(
 		};
 	}
 
+	//  Verify repeated
+	const repeated =
+		row.phone || row.name
+			? await db.excelResult.findFirst({
+					where: {
+						excel_id: excel_id,
+						status: {
+							not: "PENDING",
+						},
+
+						OR: [
+							{
+								name: row.name
+									? {
+											equals: `${row.name}`,
+											mode: "insensitive",
+									  }
+									: undefined,
+							},
+							{
+								phone: row.phone ? `${row.phone}` : undefined,
+							},
+						],
+					},
+			  })
+			: null;
+
 	const states = await db.states.findMany();
 
 	const fuse_states = new Fuse(states, {
@@ -925,7 +952,6 @@ export async function export_excel(excel_id: number) {
 			colorMap.set(result.id, colorMap.get(key));
 		}
 	});
-
 	// Mapear los resultados con sus colores correspondientes
 	return results.map((r) => {
 		let color = null;

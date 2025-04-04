@@ -165,6 +165,8 @@ const AdvancedSearch = ({ tipos }: Props) => {
 							onClick={() => {
 								setFilters({
 									...filters,
+									search: "",
+									state: "",
 									code: "",
 									colony: "",
 									asenta: "",

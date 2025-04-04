@@ -19,6 +19,30 @@ const ExportButton = ({ excel, variant: { variant } }: Props) => {
 		const workbook = new ExcelJS.Workbook();
 		const worksheet = workbook.addWorksheet("Resultados");
 
+		// Ordenar todos los resultados segun el numero de pedido
+		data.sort((a, b) => {
+			const getOrder = (value: string) => {
+				if (value.includes("m") || value.includes("M")) return 1; // 'm' comes second
+				if (value.includes("d") || value.includes("D")) return 2; // 'd' comes last
+				return 0; // no 'm' or 'd' comes first
+			};
+
+			const orderA = getOrder(a.row["A"] as string);
+			const orderB = getOrder(b.row["A"] as string);
+
+			if (orderA !== orderB) {
+				return orderA - orderB; // Sort by order first
+			}
+
+			// If order is the same, sort numerically
+			const numA =
+				parseInt((a.row["A"] as string).replace(/[^\d]/g, ""), 10) || 0;
+			const numB =
+				parseInt((b.row["A"] as string).replace(/[^\d]/g, ""), 10) || 0;
+
+			return numA - numB;
+		});
+
 		// Agregar los datos a la hoja
 		data.forEach((item, rowIndex) => {
 			const row = worksheet.addRow(

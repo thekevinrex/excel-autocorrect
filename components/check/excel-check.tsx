@@ -45,6 +45,7 @@ const ExcelCheck = ({ result, pos, setPos, excel, tipos }: Props) => {
 				setVerify={setVerify}
 				excel={excel}
 				equals={result.equals}
+				row={result.row}
 			/>
 		);
 	}

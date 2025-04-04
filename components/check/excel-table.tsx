@@ -114,7 +114,7 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 								</Button>
 								<Button variant={"outline"} size={"icon"} asChild>
 									<Link
-										href={`https://www.google.com/maps/search/?api=1&query=${row.colony},${row.city},${row.state},${row.code}`}
+										href={`https://www.google.com/maps/search/?api=1&query=${row.colony} ${row.city} ${row.state} ${row.code}`}
 										target="_blank"
 										rel="noopener noreferrer"
 									>
@@ -124,7 +124,7 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 								<Button
 									onClick={() =>
 										copy(
-											`${row.address}, ${row.local},${row.colony},${row.city},${row.state},${row.code}`,
+											`${row.address}  ${row.local} ${row.colony} ${row.city} ${row.state} ${row.code}`,
 											"Dirección copiada correctamente"
 										)
 									}

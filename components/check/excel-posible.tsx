@@ -11,7 +11,7 @@ import { Excel, ResultStatus } from "@prisma/client";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
-import { Card, CardHeader } from "../ui/card";
+import { Card, CardContent, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
 import { Filter, Loader2, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
@@ -296,6 +296,8 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 								onClick={() => {
 									setFilters({
 										...filters,
+										search: "",
+										state: "",
 										code: "",
 										colony: "",
 										asenta: "",
@@ -347,60 +349,62 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 				/>
 			</Card>
 
-			<div className="flex flex-col md:flex-row items-center gap-5 justify-between">
-				<div>
-					<ExportButton
-						excel={excel}
-						variant={{
-							variant: "secondary",
-						}}
-					/>
-				</div>
+			<Card>
+				<CardContent className="flex flex-col md:flex-row items-center gap-5 justify-between p-4">
+					<div>
+						<ExportButton
+							excel={excel}
+							variant={{
+								variant: "secondary",
+							}}
+						/>
+					</div>
 
-				<div className="flex flex-row gap-5 items-center justify-end">
-					<Button
-						type="button"
-						onClick={handleSkip}
-						variant={"destructive"}
-						disabled={skip || saving}
-					>
-						{skip ? (
-							<>
-								<Loader2 /> Guardando...
-							</>
-						) : (
-							"Incorrecto"
-						)}
-					</Button>
+					<div className="flex flex-row gap-5 items-center justify-end">
+						<Button
+							type="button"
+							onClick={handleSkip}
+							variant={"destructive"}
+							disabled={skip || saving}
+						>
+							{skip ? (
+								<>
+									<Loader2 /> Guardando...
+								</>
+							) : (
+								"Incorrecto"
+							)}
+						</Button>
 
-					<Button
-						onClick={() => handleSubmit("ERROR")}
-						disabled={saving || !selected}
-						variant={"secondary"}
-					>
-						{saving ? (
-							<>
-								<Loader2 /> Guardando...
-							</>
-						) : (
-							"Parcialmente"
-						)}
-					</Button>
+						<Button
+							onClick={() => handleSubmit("ERROR")}
+							disabled={saving || !selected}
+							variant={"secondary"}
+						>
+							{saving ? (
+								<>
+									<Loader2 /> Guardando...
+								</>
+							) : (
+								"Parcialmente"
+							)}
+						</Button>
 
-					<Button
-						onClick={() => handleSubmit("OK")}
-						disabled={saving || !selected}
-					>
-						{saving ? (
-							<>
-								<Loader2 /> Guardando...
-							</>
-						) : (
-							"Correcto"
-						)}
-					</Button>
-				</div>
-			</div>
+						<Button
+							onClick={() => handleSubmit("OK")}
+							disabled={saving || !selected}
+						>
+							{saving ? (
+								<>
+									<Loader2 /> Guardando...
+								</>
+							) : (
+								"Correcto"
+							)}
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
 		</>
 	);
 };

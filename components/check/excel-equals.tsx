@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Card, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import {
 	Table,
 	TableBody,
@@ -9,7 +9,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "../ui/table";
-import { DataType } from "@/app/(app)/(check)/check/[excel]/check";
 import { Checkbox } from "../ui/checkbox";
 import { Excel, ExcelResult } from "@prisma/client";
 import { formatExcel, toExcel } from "@/lib/utils";
@@ -25,9 +24,11 @@ type Props = {
 	setVerify: (verify: boolean) => void;
 	setPos: (pos: number) => void;
 	pos: number;
+
+	row: ExcelResult;
 };
 
-const ExcelEquals = ({ equals, excel, setPos, pos, setVerify }: Props) => {
+const ExcelEquals = ({ equals, excel, setPos, pos, setVerify, row }: Props) => {
 	const [selected, setSelected] = React.useState<number | null>(
 		equals && equals.length > 0 ? equals[0].id : null
 	);
@@ -57,6 +58,27 @@ const ExcelEquals = ({ equals, excel, setPos, pos, setVerify }: Props) => {
 				<CardHeader>
 					<CardTitle>Posibles similitudes</CardTitle>
 				</CardHeader>
+
+				<CardContent>
+					<Card>
+						<CardContent className="p-3">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+								<div className="flex flex-col">
+									<span className="text-xs text-muted-foreground">
+										Nombre del cliente
+									</span>
+									<p className="text-sm font-semibold">{row.name}</p>
+								</div>
+								<div className="flex flex-col">
+									<span className="text-xs text-muted-foreground">
+										Telefono
+									</span>
+									<p className="text-sm font-semibold">{row.phone}</p>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+				</CardContent>
 
 				<Table>
 					<TableHeader>
