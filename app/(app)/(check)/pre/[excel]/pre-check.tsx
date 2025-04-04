@@ -107,7 +107,7 @@ const PreCheck = ({ excel }: Props) => {
 			<div className="flex flex-col gap-5">
 				{Object.keys(steps).map((key, index) => (
 					<div key={index} className="flex flex-row gap-5">
-						<div className="size-16 flex flex-col items-center justify-center bg-muted border rounded-full">
+						<div className="size-16 flex flex-col items-center justify-center bg-background border rounded-full">
 							{result[key as keyof typeof steps].status === "success" &&
 								loading !== key && (
 									<div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500">

@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={`${fontSans.className} antialiased`}>
+			<body className={`${fontSans.className} antialiased bg-muted`}>
 				{children}
 
 				<Toaster position="top-center" />
