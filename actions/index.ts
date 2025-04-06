@@ -328,6 +328,39 @@ export async function skip_result(excel_id: number, row_num: number) {
 	revalidatePath("/upload");
 }
 
+export async function ok_result(excel_id: number, row_num: number) {
+	const row = await db.excelResult.findFirst({
+		where: {
+			excel_id,
+			row: row_num,
+		},
+	});
+
+	if (!row) {
+		throw new Error("Fila no encontrada");
+	}
+
+	await db.excelResult.update({
+		where: {
+			id: row.id,
+		},
+		data: {
+			status: "OK",
+		},
+	});
+
+	await db.excel.update({
+		where: {
+			id: excel_id,
+		},
+		data: {
+			last: row_num,
+		},
+	});
+
+	revalidatePath("/upload");
+}
+
 export async function pre_process_rows(
 	excel_id: number,
 	step: "f1" | "f2" | "f3" | "f4"
@@ -922,10 +955,6 @@ export async function export_excel(excel_id: number) {
 	const results = await db.excelResult.findMany({
 		where: {
 			excel_id,
-
-			status: {
-				not: "PENDING",
-			},
 		},
 		orderBy: {
 			row: "asc",
@@ -973,7 +1002,7 @@ export async function export_excel(excel_id: number) {
 					color = "22d3ee";
 					break;
 				default:
-					color = "22d3ee";
+					color = null;
 					break;
 			}
 		}

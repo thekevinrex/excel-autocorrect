@@ -90,7 +90,12 @@ const Check = ({ excel, tipos }: Props) => {
 				</Button>
 			</div>
 
-			<ExcelTable excel={excel} pos={pos} rowData={result.row} />
+			<ExcelTable
+				excel={excel}
+				pos={pos}
+				rowData={result.row}
+				setPos={setPos}
+			/>
 
 			<ExcelCheck
 				tipos={tipos}

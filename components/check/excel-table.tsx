@@ -12,20 +12,21 @@ import {
 import { DataType } from "@/app/(app)/(check)/check/[excel]/check";
 import { Button } from "../ui/button";
 import Link from "next/link";
-import { Copy, Edit, Loader2, MapPin } from "lucide-react";
+import { Check, Copy, Edit, Loader2, MapPin } from "lucide-react";
 import { Excel, ExcelResult } from "@prisma/client";
 import { copy, formatExcel, toExcel } from "@/lib/utils";
 import { Input } from "../ui/input";
 import { toast } from "sonner";
-import { update_row } from "@/actions";
+import { ok_result, update_row } from "@/actions";
 
 type Props = {
 	pos: number;
 	excel: Excel;
 	rowData: ExcelResult;
+	setPos: (pos: number) => void;
 };
 
-const ExcelTable = ({ excel, rowData, pos }: Props) => {
+const ExcelTable = ({ excel, rowData, pos, setPos }: Props) => {
 	const row: DataType = formatExcel(
 		[toExcel(rowData, excel.type)],
 		excel.type
@@ -33,6 +34,7 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 
 	const [edit, setEdit] = React.useState(false);
 	const [saving, setSaving] = React.useState(false);
+
 	const [data, setData] = React.useState<{
 		address: string;
 		reference: string;
@@ -61,6 +63,23 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 
 			setSaving(false);
 			setEdit(false);
+		} catch {
+			setSaving(false);
+
+			toast.error("Lo sentimos ha ocurrido un error al actualizar la fila");
+		}
+	};
+
+	const handleOk = async () => {
+		try {
+			setSaving(true);
+
+			await ok_result(rowData.excel_id, pos);
+
+			toast.success("Fila actualizada correctamente");
+
+			setSaving(false);
+			setPos(pos + 1);
 		} catch {
 			setSaving(false);
 
@@ -122,16 +141,12 @@ const ExcelTable = ({ excel, rowData, pos }: Props) => {
 									</Link>
 								</Button>
 								<Button
-									onClick={() =>
-										copy(
-											`${row.address}  ${row.local} ${row.colony} ${row.city} ${row.state} ${row.code}`,
-											"Dirección copiada correctamente"
-										)
-									}
+									disabled={saving}
+									onClick={handleOk}
 									size={"icon"}
 									variant={"outline"}
 								>
-									<Copy />
+									<Check />
 								</Button>
 							</div>
 						</TableCell>
