@@ -43,6 +43,7 @@ const AdvancedSearch = ({ tipos }: Props) => {
 		asenta: string;
 		code: string;
 		advanced: boolean;
+		muni: string;
 		state: string;
 	}>({
 		code: "",
@@ -50,13 +51,20 @@ const AdvancedSearch = ({ tipos }: Props) => {
 		asenta: "",
 		search: "",
 		state: "",
+		muni: "",
 		advanced: true,
 	});
 
 	const handleAdvancedSearch = async () => {
 		setPage(1);
 
-		if (!filters.colony && !filters.asenta && !filters.code && !filters.state) {
+		if (
+			!filters.colony &&
+			!filters.asenta &&
+			!filters.code &&
+			!filters.state &&
+			!filters.muni
+		) {
 			return;
 		}
 
@@ -71,7 +79,8 @@ const AdvancedSearch = ({ tipos }: Props) => {
 				filters.colony,
 				filters.asenta,
 				filters.code,
-				filters.state
+				filters.state,
+				filters.muni
 			);
 
 			setShow(result);
@@ -99,7 +108,10 @@ const AdvancedSearch = ({ tipos }: Props) => {
 				</div>
 
 				{filters.advanced && (
-					<div className="w-full flex flex-col md:flex-row items-end gap-5">
+					<form
+						action={handleAdvancedSearch}
+						className="w-full flex flex-col md:flex-row items-end gap-5"
+					>
 						<Label className="w-full">
 							Buscar colonia
 							<Input
@@ -147,6 +159,20 @@ const AdvancedSearch = ({ tipos }: Props) => {
 						</Label>
 
 						<Label className="w-full">
+							Buscar Municipio
+							<Input
+								value={filters.muni}
+								placeholder="Buscar municipio..."
+								onChange={(e) =>
+									setFilters({
+										...filters,
+										muni: e.target.value,
+									})
+								}
+							/>
+						</Label>
+
+						<Label className="w-full">
 							Buscar código
 							<Input
 								value={filters.code}
@@ -170,6 +196,7 @@ const AdvancedSearch = ({ tipos }: Props) => {
 									code: "",
 									colony: "",
 									asenta: "",
+									muni: "",
 								});
 								setShow([]);
 							}}
@@ -180,7 +207,7 @@ const AdvancedSearch = ({ tipos }: Props) => {
 							<Trash2 />
 						</Button>
 
-						<Button onClick={() => handleAdvancedSearch()} disabled={search}>
+						<Button>
 							{search ? (
 								<>
 									<Loader2 className="animate-spin" /> Buscando...
@@ -189,7 +216,7 @@ const AdvancedSearch = ({ tipos }: Props) => {
 								"Buscar"
 							)}
 						</Button>
-					</div>
+					</form>
 				)}
 			</CardHeader>
 

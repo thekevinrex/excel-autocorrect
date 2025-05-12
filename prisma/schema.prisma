@@ -37,10 +37,12 @@ model ExcelResult {
 
   name     String?
   phone    String?
+  num      String?
 
   address   String?
   reference String?
   local     String?
+
 
   equal_to Int?
   equal ExcelResult? @relation("Equal", fields: [equal_to], references: [id])

@@ -72,19 +72,21 @@ const ResultTable = ({
 					<TableBody>
 						{show.length > 0 ? (
 							show.map((r, i) => (
-								<TableRow key={i}>
+								<TableRow
+									key={i}
+									onClick={() => {
+										if (setSelected) {
+											if (selected === r.id) {
+												setSelected(null);
+											} else {
+												setSelected(r.id);
+											}
+										}
+									}}
+								>
 									{setSelected && (
 										<TableCell>
-											<Checkbox
-												checked={selected === r.id}
-												onCheckedChange={(checked) => {
-													if (checked) {
-														setSelected(r.id);
-													} else {
-														setSelected(null);
-													}
-												}}
-											/>
+											<Checkbox checked={selected === r.id} />
 										</TableCell>
 									)}
 									<TableCell>{r.colony}</TableCell>
@@ -104,12 +106,13 @@ const ResultTable = ({
 										</Button>
 
 										<Button
-											onClick={() =>
+											onClick={(e) => {
+												e.stopPropagation();
 												copy(
-													`${r.colony} ${r.city} ${r.state} ${r.code}`,
+													`${r.colony} ${r.muni} ${r.state} ${r.code} ${r.city}`,
 													"Dirección copiada correctamente"
-												)
-											}
+												);
+											}}
 											size={"icon"}
 											variant={"outline"}
 											className="mx-2"

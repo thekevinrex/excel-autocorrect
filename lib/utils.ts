@@ -197,3 +197,22 @@ export function copy(copy: string, success: string) {
 
 	toast.success(success);
 }
+
+export function normalizeNumbersToRoman(text: string): string {
+	const numberToRoman: Record<string, string> = {
+		"1": "I",
+		"2": "II",
+		"3": "III",
+		"4": "IV",
+		"5": "V",
+		"6": "VI",
+		"7": "VII",
+		"8": "VIII",
+		"9": "IX",
+		"10": "X",
+	};
+
+	return text.replace(/(\d+)/g, (match) => {
+		return numberToRoman[match] || match; // Si no está en el diccionario, lo deja igual
+	});
+}

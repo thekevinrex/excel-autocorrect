@@ -65,12 +65,14 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 		asenta: string;
 		code: string;
 		advanced: boolean;
+		muni: string;
 		state: string;
 	}>({
 		code: "",
 		colony: "",
 		asenta: "",
 		search: "",
+		muni: "",
 		state: "",
 		advanced: false,
 	});
@@ -90,6 +92,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 				search: "",
 				asenta: "",
 				state: "",
+				muni: "",
 				advanced: false,
 			});
 
@@ -116,6 +119,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 				search: "",
 				asenta: "",
 				state: "",
+				muni: "",
 				advanced: false,
 			});
 
@@ -131,7 +135,13 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 	const handleAdvancedSearch = async () => {
 		setPage(1);
 
-		if (!filters.colony && !filters.asenta && !filters.code && !filters.state) {
+		if (
+			!filters.colony &&
+			!filters.asenta &&
+			!filters.code &&
+			!filters.state &&
+			!filters.muni
+		) {
 			setShow([...result.posible]);
 			return;
 		}
@@ -147,7 +157,8 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 				filters.colony,
 				filters.asenta,
 				filters.code,
-				filters.state
+				filters.state,
+				filters.muni
 			);
 
 			setShow(result);
@@ -230,7 +241,10 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 					</div>
 
 					{filters.advanced && (
-						<div className="w-full flex flex-col md:flex-row items-end gap-5">
+						<form
+							action={handleAdvancedSearch}
+							className="w-full flex flex-col md:flex-row items-end gap-5"
+						>
 							<Label className="w-full">
 								Buscar colonia
 								<Input
@@ -278,6 +292,20 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 							</Label>
 
 							<Label className="w-full">
+								Buscar Municipio
+								<Input
+									value={filters.muni}
+									placeholder="Buscar municipio..."
+									onChange={(e) =>
+										setFilters({
+											...filters,
+											muni: e.target.value,
+										})
+									}
+								/>
+							</Label>
+
+							<Label className="w-full">
 								Buscar código
 								<Input
 									value={filters.code}
@@ -301,6 +329,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 										code: "",
 										colony: "",
 										asenta: "",
+										muni: "",
 									});
 									setShow(result.posible);
 								}}
@@ -311,7 +340,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 								<Trash2 />
 							</Button>
 
-							<Button onClick={() => handleAdvancedSearch()} disabled={search}>
+							<Button>
 								{search ? (
 									<>
 										<Loader2 className="animate-spin" /> Buscando...
@@ -320,7 +349,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 									"Buscar"
 								)}
 							</Button>
-						</div>
+						</form>
 					)}
 				</CardHeader>
 

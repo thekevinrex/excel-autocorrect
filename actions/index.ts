@@ -2,7 +2,12 @@
 
 import { ResultType } from "@/components/check/excel-check";
 import db from "@/lib/db";
-import { formatExcel, toExcel, verifyModified } from "@/lib/utils";
+import {
+	formatExcel,
+	normalizeNumbersToRoman,
+	toExcel,
+	verifyModified,
+} from "@/lib/utils";
 import { ExcelResult, ExcelType, ResultStatus } from "@prisma/client";
 
 import Fuse from "fuse.js";
@@ -144,6 +149,7 @@ export async function uploadExcel(
 
 			name: d.name ? `${d.name}` : undefined,
 			phone: d.phone ? `${d.phone}` : undefined,
+			num: d.num ? `${d.num}` : undefined,
 
 			address: d?.address ? `${d.address}` : undefined,
 			reference: d?.reference ? `${d.reference}` : undefined,
@@ -166,6 +172,12 @@ export async function update_row(
 	local: string,
 	code: string
 ) {
+	const result = await db.excelResult.findFirst({
+		where: {
+			id,
+		},
+	});
+
 	await db.excelResult.update({
 		where: {
 			id,
@@ -178,7 +190,9 @@ export async function update_row(
 		},
 	});
 
-	revalidatePath(`/check/${id}`);
+	if (result?.code !== code) {
+		revalidatePath(`/check/${id}`);
+	}
 }
 
 export async function save_result(
@@ -363,7 +377,7 @@ export async function ok_result(excel_id: number, row_num: number) {
 
 export async function pre_process_rows(
 	excel_id: number,
-	step: "f1" | "f2" | "f3" | "f4"
+	step: "f1" | "f2" | "f3" | "f4" | "f01"
 ) {
 	try {
 		if (step === "f4") {
@@ -378,6 +392,10 @@ export async function pre_process_rows(
 				posibleData: undefined,
 			},
 		});
+
+		if (step === "f01") {
+			return await pre_f01(excel_id, rows);
+		}
 
 		if (step === "f1") {
 			return await pre_f1(excel_id, rows);
@@ -396,6 +414,242 @@ export async function pre_process_rows(
 		console.error(e);
 		return null;
 	}
+}
+
+export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
+	let stats = 0;
+
+	for (const row of rows) {
+		if (row.address && row.state && row.city && row.code) {
+			const correctedAddress = await correctStructuredAddress(
+				row.address,
+				row.state,
+				row.city,
+				row.code
+			);
+
+			if (correctedAddress) {
+				await db.excelResult.update({
+					where: { id: row.id },
+					data: {
+						address: correctedAddress.address,
+						city: correctedAddress.city,
+						colony: correctedAddress.colony,
+					},
+				});
+				stats++;
+				continue;
+			}
+		}
+
+		if (row.colony && isPrefixedColony(row.colony)) {
+			const baseNames = getPossibleColonyNames(row.colony);
+			const correctedColony = await findMatchingColony(
+				baseNames,
+				row?.state ?? "",
+				row?.city ?? "",
+				row?.code ?? ""
+			);
+
+			if (correctedColony) {
+				await db.excelResult.update({
+					where: { id: row.id },
+					data: { colony: correctedColony },
+				});
+				stats++;
+				continue;
+			}
+		}
+
+		if (
+			row.colony &&
+			(row.colony.toLowerCase().includes("fraccionamiento") ||
+				row.colony.toLowerCase().includes("barrio"))
+		) {
+			const baseColonyName = row.colony
+				.replace(/fraccionamiento/gi, "")
+				.replace(/barrio/gi, "")
+				.trim();
+
+			// Buscar coincidencias en la misma ciudad y estado
+			const matchingAddresses = await db.address.findMany({
+				where: {
+					d_esta: `${row.state}`,
+					d_muni: `${row.city}`,
+					OR: [
+						{ d_asenta: { contains: baseColonyName } },
+						{ d_asenta: { contains: row.colony } },
+					],
+				},
+				select: {
+					d_asenta: true,
+					d_tipo_asenta: true,
+					d_code: true, // Necesario para verificar duplicados en el mismo CP
+				},
+			});
+
+			if (matchingAddresses.length === 1) {
+				// Solo hay una coincidencia → Actualizar
+				await db.excelResult.update({
+					where: { id: row.id },
+					data: { colony: matchingAddresses[0].d_asenta },
+				});
+				stats++;
+			}
+			// Si hay múltiples coincidencias en el mismo CP, no hacemos cambios (queda para revisión manual)
+		}
+
+		if (row.colony && /\d+/.test(row.colony)) {
+			const normalizedColony = normalizeNumbersToRoman(row.colony);
+			if (normalizedColony !== row.colony) {
+				await db.excelResult.update({
+					where: { id: row.id },
+					data: { colony: normalizedColony },
+				});
+				stats++;
+			}
+		}
+
+		if (
+			row.colony?.toLowerCase().includes("primera sección") ||
+			row.colony?.toLowerCase().includes("primera seccion")
+		) {
+			if (row.colony.toLowerCase().includes("san mateo")) {
+				await db.excelResult.update({
+					where: {
+						id: row.id,
+					},
+					data: {
+						colony: `San Mateo 1ra Sección`,
+					},
+				});
+
+				stats++;
+			}
+		}
+
+		if (row.colony?.toLowerCase().includes(" sm ")) {
+			await db.excelResult.update({
+				where: {
+					id: row.id,
+				},
+				data: {
+					colony: row.colony.includes(" sm ")
+						? row.colony.replace(" sm ", "Supermanzana")
+						: row.colony.replace(" Sm ", "Supermanzana"),
+				},
+			});
+
+			stats++;
+		}
+
+		if (row.city?.toLowerCase().includes("cancun")) {
+			await db.excelResult.update({
+				where: {
+					id: row.id,
+				},
+				data: {
+					city: "Benito Juárez",
+				},
+			});
+
+			stats++;
+		}
+	}
+
+	return stats;
+}
+
+// Corrige direcciones mal estructuradas (caso Palo Gordo)
+async function correctStructuredAddress(
+	address: string,
+	state: string,
+	city: string,
+	code: string
+): Promise<{ address: string; city: string; colony: string } | null> {
+	// Extraer posibles nombres de localidad de la dirección
+	const possibleLocations = address
+		.split(" ")
+		.filter((part) => part.length > 3 && !/^\d+$/.test(part));
+
+	// Buscar coincidencias exactas en la base de datos
+	for (const location of possibleLocations) {
+		const matches = await db.address.findMany({
+			where: {
+				d_code: code,
+				d_esta: state,
+				OR: [
+					{ d_asenta: { contains: location } },
+					{ d_muni: { contains: location } },
+					{ d_ciud: { contains: location } },
+				],
+			},
+			select: {
+				d_asenta: true,
+				d_muni: true,
+				d_ciud: true,
+			},
+		});
+
+		// Si hay una única coincidencia para este código postal
+		if (matches.length === 1) {
+			return {
+				address: `${location} (${matches[0].d_asenta})`,
+				city: matches[0].d_muni,
+				colony: matches[0].d_asenta,
+			};
+		}
+	}
+	return null;
+}
+
+// Verifica si la colonia tiene prefijos (Fracc, Colonia, etc.)
+function isPrefixedColony(colony: string): boolean {
+	return /^(fracc|fraccionamiento|colonia)\s/i.test(colony);
+}
+
+// Genera posibles nombres base para búsqueda (ej: "Fracc Montoya IVO" → ["Montoya IVO", "IVO Montoya"])
+function getPossibleColonyNames(colony: string): string[] {
+	const baseName = colony
+		.replace(/^(fracc|fraccionamiento|colonia)\s/i, "")
+		.trim();
+
+	// Si tiene números romanos o naturales, probar diferentes ordenamientos
+	if (/\s[IVXLCDM]+\s?$/i.test(baseName)) {
+		const parts = baseName.split(" ");
+		if (parts.length > 1) {
+			return [
+				baseName,
+				`${parts[parts.length - 1]} ${parts.slice(0, -1).join(" ")}`,
+			];
+		}
+	}
+	return [baseName];
+}
+
+// Busca la colonia en la base de datos con diferentes variaciones
+async function findMatchingColony(
+	possibleNames: string[],
+	state: string,
+	city: string,
+	code: string
+): Promise<string | null> {
+	for (const name of possibleNames) {
+		const matches = await db.address.findMany({
+			where: {
+				d_code: code,
+				d_esta: state,
+				d_muni: city,
+				d_asenta: { contains: name },
+			},
+			select: { d_asenta: true },
+		});
+
+		if (matches.length === 1) {
+			return matches[0].d_asenta;
+		}
+	}
+	return null;
 }
 
 export async function pre_f1(excel_id: number, rows: ExcelResult[]) {
@@ -530,9 +784,13 @@ export async function pre_f4(excel_id: number) {
 		(r) => r.status === "PENDING" && r.posibleData
 	);
 
-	const otherResults = allResults.filter(
-		(r) => r.status !== "OK" && !(r.status === "PENDING" && r.posibleData)
-	);
+	const otherResults = allResults
+		.filter(
+			(r) => r.status !== "OK" && !(r.status === "PENDING" && r.posibleData)
+		)
+		.sort((r, b) =>
+			r.num?.startsWith("#D") || r.num?.startsWith("#d") ? -1 : 1
+		);
 
 	const reorderedResults = [
 		...okResults,
@@ -587,7 +845,7 @@ export async function verify_is_correct(excel_id: number, row: ExcelResult) {
 
 	//  Verify repeated
 	const repeated =
-		row.phone || row.name
+		row.phone || row.name || row.num
 			? await db.excelResult.findFirst({
 					where: {
 						excel_id: excel_id,
@@ -607,6 +865,9 @@ export async function verify_is_correct(excel_id: number, row: ExcelResult) {
 							{
 								phone: row.phone ? `${row.phone}` : undefined,
 							},
+							{
+								num: row.num ? `${row.num}` : undefined,
+							},
 						],
 					},
 			  })
@@ -624,6 +885,33 @@ export async function verify_is_correct(excel_id: number, row: ExcelResult) {
 		});
 
 		return true;
+	}
+
+	if (row.colony?.toLowerCase().includes("calvario")) {
+		const verify_correct = await db.address.findMany({
+			where: {
+				d_asenta: {
+					contains: "calvario",
+					mode: "insensitive",
+				},
+				d_code: `${row.code}`,
+			},
+		});
+
+		if (verify_correct.length === 1) {
+			await db.excelResult.update({
+				where: {
+					id: row.id,
+				},
+				data: {
+					status: "OK",
+					colony: verify_correct[0].d_asenta,
+					equal_to: repeated ? repeated.id : null,
+				},
+			});
+
+			return true;
+		}
 	}
 
 	return false;
@@ -853,9 +1141,10 @@ export async function search_results(
 	colony: string,
 	tipe_asenta: string,
 	code: string,
-	state: string
+	state: string,
+	muni: string
 ) {
-	if (!colony && !tipe_asenta && !code && !state) {
+	if (!colony && !tipe_asenta && !code && !state && !muni) {
 		return [];
 	}
 
@@ -896,6 +1185,10 @@ export async function search_results(
 				name: "d_esta",
 				weight: 5, // Peso aumentado para colonia
 			},
+			{
+				name: "d_muni",
+				weight: 5,
+			},
 		],
 		includeScore: true,
 		shouldSort: true,
@@ -921,6 +1214,12 @@ export async function search_results(
 	if (state) {
 		$or.push({
 			d_esta: state,
+		});
+	}
+
+	if (muni) {
+		$or.push({
+			d_muni: muni,
 		});
 	}
 

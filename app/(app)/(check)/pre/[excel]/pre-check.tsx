@@ -13,6 +13,7 @@ type Props = {
 };
 
 const steps = {
+	f01: "Pre Filtro 1 - Pre Verificación de nombres o abreviaturas",
 	f1: "Filtro 1 - Todos los datos de las filas estan correctos",
 	f2: "Filtro 2 - El código postal es correcto y la colonia es correcto",
 
@@ -26,7 +27,7 @@ const PreCheck = ({ excel }: Props) => {
 
 	const [currentStep, setCurrentStep] = React.useState<
 		keyof typeof steps | "ended"
-	>("f1");
+	>("f01");
 
 	const [result, setResult] = React.useState<{
 		[key in keyof typeof steps]: {
@@ -34,6 +35,7 @@ const PreCheck = ({ excel }: Props) => {
 			result: number;
 		};
 	}>({
+		f01: { status: "pending", result: 0 },
 		f1: { status: "pending", result: 0 },
 		f2: { status: "pending", result: 0 },
 		f3: { status: "pending", result: 0 },
