@@ -1,5 +1,6 @@
 "use server";
 
+import { DataType } from "@/app/(app)/(check)/check/[excel]/check";
 import { ResultType } from "@/components/check/excel-check";
 import db from "@/lib/db";
 import {
@@ -126,6 +127,60 @@ export async function uploadExcel(
 		data: {
 			from: excel.from,
 			to: excel.to,
+			type: excel.type,
+			last: -1,
+			total: data.length,
+
+			excel_name: file.name,
+			excel_size: file.size,
+		},
+	});
+
+	await db.excelResult.createMany({
+		data: data.map((d, i) => ({
+			excel_id: newE.id,
+
+			row: i,
+			status: "PENDING",
+
+			code: d?.code ? `${d.code}` : undefined,
+			city: d?.city ? `${d.city}` : undefined,
+			colony: d?.colony ? `${d.colony}` : undefined,
+			state: d.state ? `${d.state}` : undefined,
+
+			name: d.name ? `${d.name}` : undefined,
+			phone: d.phone ? `${d.phone}` : undefined,
+			num: d.num ? `${d.num}` : undefined,
+
+			address: d?.address ? `${d.address}` : undefined,
+			reference: d?.reference ? `${d.reference}` : undefined,
+			local: d?.local ? `${d.local}` : undefined,
+
+			rowData: d.row,
+		})),
+	});
+
+	revalidatePath("/upload");
+
+	return newE;
+}
+
+export async function uploadExcel_Pedido(
+	file: {
+		name: string;
+		size: number;
+	},
+
+	excel: {
+		type: ExcelType;
+	},
+
+	data: DataType[]
+) {
+	const newE = await db.excel.create({
+		data: {
+			from: 0,
+			to: data.length,
 			type: excel.type,
 			last: -1,
 			total: data.length,
@@ -779,10 +834,17 @@ export async function pre_f4(excel_id: number) {
 		},
 	});
 
-	const okResults = allResults.filter((r) => r.status === "OK");
-	const pendingWithPossibleData = allResults.filter(
-		(r) => r.status === "PENDING" && r.posibleData
-	);
+	const okResults = allResults
+		.filter((r) => r.status === "OK")
+		.sort((r, b) =>
+			r.num?.startsWith("#D") || r.num?.startsWith("#d") ? -1 : 1
+		);
+
+	const pendingWithPossibleData = allResults
+		.filter((r) => r.status === "PENDING" && r.posibleData)
+		.sort((r, b) =>
+			r.num?.startsWith("#D") || r.num?.startsWith("#d") ? -1 : 1
+		);
 
 	const otherResults = allResults
 		.filter(

@@ -19,7 +19,7 @@ type Props = {
 };
 
 export type DataType = {
-	num: number;
+	num: string;
 	name: string;
 	phone: string;
 
