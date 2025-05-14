@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { cn, formatExcel } from "@/lib/utils";
 import { DataType } from "@/app/(app)/(check)/check/[excel]/check";
 import { Card, CardContent, CardFooter } from "./ui/card";
+import { Textarea } from "./ui/textarea";
 
 const UploadExcel = ({
 	from,
@@ -37,8 +38,6 @@ const UploadExcel = ({
 	const [files, setFiles] = React.useState<FileList | null>(null);
 	const router = useRouter();
 	const ref = React.useRef<HTMLInputElement>(null);
-
-	const [add, setAdd] = React.useState("");
 
 	const handleFileUpload = async () => {
 		const file = files?.[0];
@@ -141,9 +140,14 @@ const UploadExcel = ({
 
 			setLoad(true);
 			setRows(range);
+			setSelected(range.map((r) => r.num));
 			setStatus("pending");
 
 			setFiles(null);
+			setFile({
+				name: file!.name,
+				size: file!.size,
+			});
 
 			if (ref.current) {
 				ref.current.value = "";
@@ -232,10 +236,10 @@ const UploadExcel = ({
 						>
 							{status === "loading" ? (
 								<>
-									<Loader2 className="animate-spin" /> Cargando...
+									<Loader2 className="animate-spin" /> Extrayendo...
 								</>
 							) : (
-								"Cargar pedidos"
+								"Extraer"
 							)}
 						</Button>
 					</div>
@@ -253,8 +257,8 @@ const UploadExcel = ({
 			)}
 
 			{load && (
-				<div className="w-full border border-dashed border-gray-300 p-4 rounded-lg mb-4 min-h-60 grid grid-cols-2 relative">
-					<div className="flex flex-row flex-wrap gap-2 items-start p-3">
+				<div className="w-full border border-dashed border-gray-300 p-4 rounded-lg mb-4 min-h-60 grid grid-cols-1 relative">
+					{/* <div className="flex flex-row flex-wrap gap-2 items-start mb-3">
 						{rows.map((row, i) => {
 							return (
 								<div
@@ -275,63 +279,61 @@ const UploadExcel = ({
 								</div>
 							);
 						})}
-					</div>
+					</div> */}
+
+					<Textarea
+						placeholder="Pedidos a extraer"
+						className="mb-5 min-h-64"
+						defaultValue={selected.join("\n")}
+						onBlur={(e) => {
+							setSelected(
+								e.target.value
+									.split("\n")
+									.map((r) => r.trim())
+									.map((r) => {
+										const match = r.match(/#\w\d+/); // Extract the first match of # followed by a letter and numbers
+										return match ? match[0] : null;
+									})
+									.filter((r) => r !== null) // Filter out null values
+							);
+						}}
+					/>
 
 					<div className="flex-col flex gap-3">
-						<Card>
-							<CardContent className="p-3 flex flex-row gap-3 items-start flex-wrap">
-								{selected.length === 0 && (
-									<p className="text-gray-500 text-sm">
-										Selecciona las filas que deseas cargar
-									</p>
-								)}
-
-								{selected.map((row, i) => {
-									return (
-										<div
-											key={i}
-											className={`px-2 py-1 rounded-md border border-border cursor-pointer bg-blue-500 text-white`}
-											onClick={() => {
-												setSelected(selected.filter((r) => r !== row));
-											}}
-										>
-											{row}
-										</div>
-									);
-								})}
-							</CardContent>
-
+						<Card className="flex flex-col">
 							<CardContent className="p-3">
-								<form
-									action={() => {
-										if (add.length === 0) {
-											return;
-										}
-
-										if (selected.includes(add)) {
-											return;
-										}
-
-										setSelected([...selected, add]);
-										setAdd("");
-									}}
-								>
-									<Input
-										placeholder="Añadir fila"
-										value={add}
-										onChange={(e) => {
-											setAdd(e.target.value);
-										}}
-									/>
-								</form>
+								<p className="text-gray-500 text-sm">
+									{selected.length} filas seleccionadas
+								</p>
 							</CardContent>
 
-							{selected.length > 0 && (
-								<CardFooter>
-									<p className="text-gray-500 text-sm">
-										{selected.length} filas seleccionadas
-									</p>
-								</CardFooter>
+							{selected.filter(
+								(s) => selected.filter((ss) => ss === s).length > 1
+							).length > 0 && (
+								<CardContent className="p-3">
+									<p className="text-gray-500 text-sm">Repetidos</p>
+
+									<div className="flex flex-row flex-wrap gap-2 items-start mb-3">
+										{[
+											...Array.from(
+												new Set(
+													selected.filter(
+														(s) => selected.filter((ss) => ss === s).length > 1
+													)
+												)
+											),
+										].map((s, i) => (
+											<div
+												className={cn(
+													"px-2 py-1 rounded-md border border-border"
+												)}
+												key={i}
+											>
+												{s}
+											</div>
+										))}
+									</div>
+								</CardContent>
 							)}
 						</Card>
 
@@ -348,7 +350,7 @@ const UploadExcel = ({
 									<Loader2 className="animate-spin" /> Subiendo...
 								</>
 							) : (
-								"Subir pedidos"
+								"Comenzar"
 							)}
 						</Button>
 					</div>
