@@ -834,30 +834,20 @@ export async function pre_f4(excel_id: number) {
 		},
 	});
 
-	const okResults = allResults
-		.filter((r) => r.status === "OK")
-		.sort((r, b) =>
-			r.num?.startsWith("#D") || r.num?.startsWith("#d") ? -1 : 1
-		);
+	const okResults = allResults.filter((r) => r.status === "OK");
 
-	const pendingWithPossibleData = allResults
-		.filter((r) => r.status === "PENDING" && r.posibleData)
-		.sort((r, b) =>
-			r.num?.startsWith("#D") || r.num?.startsWith("#d") ? -1 : 1
-		);
-
-	const otherResults = allResults
-		.filter(
-			(r) => r.status !== "OK" && !(r.status === "PENDING" && r.posibleData)
-		)
-		.sort((r, b) =>
-			r.num?.startsWith("#D") || r.num?.startsWith("#d") ? -1 : 1
-		);
+	const pendingWithPossibleData = allResults.filter(
+		(r) => r.status === "PENDING" && r.posibleData
+	);
+	const otherResults = allResults.filter(
+		(r) => r.status !== "OK" && !(r.status === "PENDING" && r.posibleData)
+	);
 
 	const reorderedResults = [
 		...okResults,
-		...pendingWithPossibleData,
-		...otherResults,
+		...[...pendingWithPossibleData, ...otherResults].sort((r, b) =>
+			r.num?.startsWith("#D") || r.num?.startsWith("#d") ? -1 : 1
+		),
 	];
 
 	for (let i = 0; i < reorderedResults.length; i++) {
@@ -1035,33 +1025,6 @@ export async function proccess_row(
 		};
 	}
 
-	//  Verify repeated
-	const repeated =
-		row.phone || row.name
-			? await db.excelResult.findFirst({
-					where: {
-						excel_id: excel_id,
-						status: {
-							not: "PENDING",
-						},
-
-						OR: [
-							{
-								name: row.name
-									? {
-											equals: `${row.name}`,
-											mode: "insensitive",
-									  }
-									: undefined,
-							},
-							{
-								phone: row.phone ? `${row.phone}` : undefined,
-							},
-						],
-					},
-			  })
-			: null;
-
 	const states = await db.states.findMany();
 
 	const fuse_states = new Fuse(states, {
@@ -1073,12 +1036,19 @@ export async function proccess_row(
 
 	const address = await db.address.findMany({
 		where: {
-			id_state:
-				posible_states.length > 0
-					? {
-							in: posible_states.map((p) => p.item.id),
-					  }
-					: undefined,
+			OR: [
+				{
+					id_state:
+						posible_states.length > 0
+							? {
+									in: posible_states.map((p) => p.item.id),
+							  }
+							: undefined,
+				},
+				{
+					d_code: `${row.code ?? ""}`,
+				},
+			],
 		},
 	});
 
@@ -1086,11 +1056,11 @@ export async function proccess_row(
 		keys: [
 			{
 				name: "d_code",
-				weight: 15, // Prioridad máxima (código postal debe ser exacto)
+				weight: 20,
 			},
 			{
 				name: "d_esta",
-				weight: 15, // Alto peso para coincidencia de estado
+				weight: 5, // Alto peso para coincidencia de estado
 			},
 			{
 				name: "d_muni",

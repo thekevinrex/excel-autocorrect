@@ -136,11 +136,9 @@ const UploadExcel = ({
 
 			const range = formatExcel(datosJson, type);
 
-			toast.success("Pedidos cargado correctamente");
-
 			setLoad(true);
 			setRows(range);
-			setSelected(range.map((r) => r.num));
+			// setSelected(range.map((r) => r.num));
 			setStatus("pending");
 
 			setFiles(null);
@@ -284,7 +282,6 @@ const UploadExcel = ({
 					<Textarea
 						placeholder="Pedidos a extraer"
 						className="mb-5 min-h-64"
-						defaultValue={selected.join("\n")}
 						onBlur={(e) => {
 							setSelected(
 								e.target.value
