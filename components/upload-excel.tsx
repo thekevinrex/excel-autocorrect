@@ -251,15 +251,19 @@ const UploadExcel = ({
 
 		const phone_repeated = [];
 		for (const num of clean_pedidos) {
-			const row = rows.find((r) => r.num === num)!;
+			const row = rows.find((r) => r.num === num);
 
-			const rep = rows.filter((r) => r.phone === row.phone).map((r) => r.num);
+			if (row) {
+				const rep = rows
+					.filter((r) => r?.phone === row.phone)
+					.map((r) => r.num);
 
-			if (rep.length > 0) {
-				phone_repeated.push({
-					num: row.num,
-					with: rep,
-				});
+				if (rep.length > 0) {
+					phone_repeated.push({
+						num: row.num,
+						with: rep,
+					});
+				}
 			}
 		}
 
