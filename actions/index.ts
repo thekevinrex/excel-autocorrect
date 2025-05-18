@@ -173,26 +173,33 @@ export async function uploadExcel_Pedido(
 
 	excel: {
 		type: ExcelType;
+		id?: number;
 	},
 
 	data: DataType[]
 ) {
-	const newE = await db.excel.create({
-		data: {
-			from: 0,
-			to: data.length,
-			type: excel.type,
-			last: -1,
-			total: data.length,
+	let id = excel.id;
 
-			excel_name: file.name,
-			excel_size: file.size,
-		},
-	});
+	if (!id) {
+		const newE = await db.excel.create({
+			data: {
+				from: 0,
+				to: data.length,
+				type: excel.type,
+				last: -1,
+				total: data.length,
+
+				excel_name: file.name,
+				excel_size: file.size,
+			},
+		});
+
+		id = newE.id;
+	}
 
 	await db.excelResult.createMany({
 		data: data.map((d, i) => ({
-			excel_id: newE.id,
+			excel_id: id,
 
 			row: i,
 			status: "PENDING",
@@ -216,7 +223,7 @@ export async function uploadExcel_Pedido(
 
 	revalidatePath("/upload");
 
-	return newE;
+	return id;
 }
 
 export async function update_row(

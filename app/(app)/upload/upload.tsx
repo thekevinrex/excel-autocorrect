@@ -56,7 +56,7 @@ const Upload = ({ last_update }: { last_update?: Date }) => {
 					</div>
 				</CardHeader>
 
-				<CardContent>
+				{/* <CardContent>
 					<CardTitle>Procesar rango de filas</CardTitle>
 					<div className="flex flex-row flex-wrap items-center gap-3 mt-2">
 						<div>
@@ -94,7 +94,7 @@ const Upload = ({ last_update }: { last_update?: Date }) => {
 							</Label>
 						</div>
 					</div>
-				</CardContent>
+				</CardContent> */}
 
 				<CardContent className="">
 					<UploadExcel from={limits.from} type={type} to={limits.to} />
