@@ -34,9 +34,16 @@ const UploadExcel = ({
 	const [analisis, setAnalisis] = React.useState<{
 		num: number;
 		repeated: string[];
+		reapeated_phones: Array<{
+			num: string;
+			with: string[];
+		}>;
+		not_found: string[];
 	}>({
 		num: 0,
 		repeated: [],
+		reapeated_phones: [],
+		not_found: [],
 	});
 
 	const [file, setFile] = React.useState<{
@@ -69,22 +76,41 @@ const UploadExcel = ({
 				defval: null, // This will ensure empty fields are included in the JSON
 			});
 
-			const range = formatExcel(datosJson, type);
+			let range;
 
-			setRows(range);
-			setStatus("loaded");
-			setLoading(false);
+			try {
+				range = formatExcel(datosJson, type);
 
-			// setText(range.map((r) => r.num).join("\n"));
+				setRows(range);
+				setStatus("loaded");
+				setLoading(false);
 
-			setFiles(null);
-			setFile({
-				name: file!.name,
-				size: file!.size,
-			});
+				// setText(range.map((r) => r.num).join("\n"));
 
-			if (ref.current) {
-				ref.current.value = "";
+				setFiles(null);
+				setFile({
+					name: file!.name,
+					size: file!.size,
+				});
+
+				if (ref.current) {
+					ref.current.value = "";
+				}
+			} catch (e: any) {
+				if (e.message) {
+					toast.error(e.message);
+				}
+
+				setLoading(false);
+
+				setFiles(null);
+				setFile(null);
+
+				if (ref.current) {
+					ref.current.value = "";
+				}
+
+				return;
 			}
 		};
 
@@ -94,6 +120,8 @@ const UploadExcel = ({
 			setAnalisis({
 				num: 0,
 				repeated: [],
+				reapeated_phones: [],
+				not_found: [],
 			});
 			setFile(null);
 			setStatus("pending");
@@ -125,22 +153,21 @@ const UploadExcel = ({
 				})
 				.filter((r) => r !== null);
 
-			const correct_pedidos = [
+			const clean_pedidos = [
 				...Array.from(
 					new Set(
-						rows
-							.filter((row) => pedidos.includes(row.num))
-							.filter(
-								(row) => !(pedidos.filter((ss) => ss === row.num).length > 1)
-							)
-							.map((row) => row.num)
+						pedidos.filter(
+							(row) => pedidos.filter((ss) => ss === row).length === 1
+						)
 					)
 				),
-			];
+			].sort((a, b) => (!a.toLowerCase().startsWith("#d") ? -1 : 1));
 
-			let selectedRows = correct_pedidos.map((p) => {
-				return rows.find((row) => row.num === p)!;
-			});
+			let selectedRows = clean_pedidos
+				.map((p) => {
+					return rows.find((row) => row.num === p);
+				})
+				.filter((p) => p !== undefined && p !== null);
 
 			if (selectedRows.length === 0) {
 				toast.error("No se encontraron filas para subir");
@@ -149,7 +176,7 @@ const UploadExcel = ({
 
 			let id = undefined;
 
-			for (let i = 0; i < pedidos.length; i += chunkSize) {
+			for (let i = 0; i < selectedRows.length; i += chunkSize) {
 				const excel = await uploadExcel_Pedido(
 					{
 						name: file!.name,
@@ -157,6 +184,7 @@ const UploadExcel = ({
 					},
 					{
 						type,
+						total: selectedRows.length,
 						id,
 					},
 
@@ -206,21 +234,44 @@ const UploadExcel = ({
 		const repeated = [
 			...Array.from(
 				new Set(
-					rows
-						.filter((row) => pedidos.includes(row.num))
-						.filter(
-							(row) =>
-								pedidos.filter((ss) => ss === row.num).length > 1 ||
-								rows.filter((rr) => rr.phone === row.phone).length > 1
-						)
-						.map((row) => row.num)
+					pedidos.filter((row) => pedidos.filter((ss) => ss === row).length > 1)
 				)
 			),
 		];
 
+		const clean_pedidos = [
+			...Array.from(
+				new Set(
+					pedidos.filter(
+						(row) => pedidos.filter((ss) => ss === row).length === 1
+					)
+				)
+			),
+		];
+
+		const phone_repeated = [];
+		for (const num of clean_pedidos) {
+			const row = rows.find((r) => r.num === num)!;
+
+			const rep = rows.filter((r) => r.phone === row.phone).map((r) => r.num);
+
+			if (rep.length > 0) {
+				phone_repeated.push({
+					num: row.num,
+					with: rep,
+				});
+			}
+		}
+
+		const not_found = clean_pedidos.filter(
+			(p) => !rows.find((r) => r.num === p)
+		);
+
 		setAnalisis({
 			num: pedidos.length,
 			repeated: repeated,
+			reapeated_phones: phone_repeated,
+			not_found,
 		});
 
 		setStatus("analized");
@@ -300,9 +351,32 @@ const UploadExcel = ({
 									</p>
 								</CardContent>
 
+								{analisis.not_found.length > 0 && (
+									<CardContent className="p-3 mt-4">
+										<p className="text-gray-500 text-sm">
+											# de pedidos no encontrados:
+										</p>
+
+										<div className="flex flex-row flex-wrap gap-2 items-start mb-3">
+											{analisis.not_found.map((s, i) => (
+												<div
+													className={cn(
+														"px-2 py-1 rounded-md border border-border"
+													)}
+													key={i}
+												>
+													{s}
+												</div>
+											))}
+										</div>
+									</CardContent>
+								)}
+
 								{analisis.repeated.length > 0 && (
-									<CardContent className="p-3">
-										<p className="text-gray-500 text-sm">Repetidos</p>
+									<CardContent className="p-3 mt-4">
+										<p className="text-gray-500 text-sm">
+											# de pedidos repetidos:
+										</p>
 
 										<div className="flex flex-row flex-wrap gap-2 items-start mb-3">
 											{analisis.repeated.map((s, i) => (
@@ -318,6 +392,29 @@ const UploadExcel = ({
 										</div>
 									</CardContent>
 								)}
+
+								{analisis.reapeated_phones.length > 0 && (
+									<CardContent className="p-3 mb-4">
+										<p className="text-gray-500 text-sm">
+											# de pedidos (Teléfono) repetidos:
+										</p>
+
+										<div className="flex flex-row flex-wrap gap-2 items-start mb-3">
+											{analisis.reapeated_phones.map((s, i) => {
+												return s.with.map((ss, ii) => (
+													<div
+														className={cn(
+															"px-2 py-1 rounded-md border border-border"
+														)}
+														key={i + "_" + ii}
+													>
+														{`${s.num} con ${ss}`}
+													</div>
+												));
+											})}
+										</div>
+									</CardContent>
+								)}
 							</Card>
 						)}
 
@@ -329,7 +426,7 @@ const UploadExcel = ({
 									e.preventDefault();
 									handleAnalisis();
 								}}
-								variant={"secondary"}
+								variant={"destructive"}
 							>
 								Analizar
 							</Button>

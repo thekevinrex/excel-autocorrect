@@ -173,6 +173,7 @@ export async function uploadExcel_Pedido(
 
 	excel: {
 		type: ExcelType;
+		total: number;
 		id?: number;
 	},
 
@@ -184,10 +185,10 @@ export async function uploadExcel_Pedido(
 		const newE = await db.excel.create({
 			data: {
 				from: 0,
-				to: data.length,
+				to: excel.total,
 				type: excel.type,
 				last: -1,
-				total: data.length,
+				total: excel.total,
 
 				excel_name: file.name,
 				excel_size: file.size,

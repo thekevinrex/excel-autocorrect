@@ -21,6 +21,21 @@ export function formatSize(size: number) {
 }
 
 export function formatExcel(range: any, type: ExcelType) {
+	if (range.length > 0) {
+		if (range[0]) {
+			if (type === "TIPE_2" && typeof range[0]["B"] === "string") {
+				throw new Error(
+					"Este archivo es tipo 1 por favor, vuelva a repetir la acción de forma correcta"
+				);
+			}
+			if (type === "TIPE_1" && typeof range[0]["B"] !== "string") {
+				throw new Error(
+					"Este archivo es tipo 2 por favor, vuelva a repetir la acción de forma correcta"
+				);
+			}
+		}
+	}
+
 	if (type === "TIPE_1") {
 		return excelType1(range);
 	}
