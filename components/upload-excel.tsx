@@ -70,10 +70,21 @@ const UploadExcel = ({
 
 			const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
 
-			const datosJson = XLSX.utils.sheet_to_json(primeraHoja, {
-				header: "A",
-				blankrows: true,
-				defval: null, // This will ensure empty fields are included in the JSON
+			let datosJson: Array<any> = [];
+
+			workbook.SheetNames.forEach((name) => {
+				// Get the sheet
+				const sheet = workbook.Sheets[name];
+
+				const sheetJson = XLSX.utils.sheet_to_json(sheet, {
+					header: "A",
+					blankrows: true,
+					defval: null, // This will ensure empty fields are included in the JSON
+				});
+
+				if (sheetJson.length > 0) {
+					datosJson = [...datosJson, ...sheetJson];
+				}
 			});
 
 			let range;
@@ -151,17 +162,10 @@ const UploadExcel = ({
 					const match = r.match(/#\w\d+/); // Extract the first match of # followed by a letter and numbers
 					return match ? match[0] : null;
 				})
-				.filter((r) => r !== null);
+				.filter((r) => r !== null)
+				.sort((a, b) => (!a.toLowerCase().startsWith("#d") ? -1 : 1));
 
-			const clean_pedidos = [
-				...Array.from(
-					new Set(
-						pedidos.filter(
-							(row) => pedidos.filter((ss) => ss === row).length === 1
-						)
-					)
-				),
-			].sort((a, b) => (!a.toLowerCase().startsWith("#d") ? -1 : 1));
+			const clean_pedidos = [...Array.from(new Set(pedidos))];
 
 			let selectedRows = clean_pedidos
 				.map((p) => {
@@ -169,14 +173,28 @@ const UploadExcel = ({
 				})
 				.filter((p) => p !== undefined && p !== null);
 
-			if (selectedRows.length === 0) {
+			let processedRow: Array<DataType> = [];
+
+			for (const row of selectedRows) {
+				if (processedRow.some((p) => p.num === row.num)) {
+					continue;
+				}
+
+				if (processedRow.some((p) => p.phone === row.phone)) {
+					continue;
+				}
+
+				processedRow.push(row);
+			}
+
+			if (processedRow.length === 0) {
 				toast.error("No se encontraron filas para subir");
 				return;
 			}
 
 			let id = undefined;
 
-			for (let i = 0; i < selectedRows.length; i += chunkSize) {
+			for (let i = 0; i < processedRow.length; i += chunkSize) {
 				const excel = await uploadExcel_Pedido(
 					{
 						name: file!.name,
@@ -184,11 +202,11 @@ const UploadExcel = ({
 					},
 					{
 						type,
-						total: selectedRows.length,
+						total: processedRow.length,
 						id,
 					},
 
-					selectedRows.slice(i, i + chunkSize)
+					processedRow.slice(i, i + chunkSize)
 				);
 
 				if (excel) {
@@ -229,7 +247,8 @@ const UploadExcel = ({
 				const match = r.match(/#\w\d+/); // Extract the first match of # followed by a letter and numbers
 				return match ? match[0] : null;
 			})
-			.filter((r) => r !== null);
+			.filter((r) => r !== null)
+			.sort((a, b) => (!a.toLowerCase().startsWith("#d") ? -1 : 1));
 
 		const repeated = [
 			...Array.from(
@@ -239,23 +258,17 @@ const UploadExcel = ({
 			),
 		];
 
-		const clean_pedidos = [
-			...Array.from(
-				new Set(
-					pedidos.filter(
-						(row) => pedidos.filter((ss) => ss === row).length === 1
-					)
-				)
-			),
-		];
+		const clean_pedidos = [...Array.from(new Set(pedidos))];
+
+		const pedidos_rows = rows.filter((r) => clean_pedidos.includes(r.num));
 
 		const phone_repeated = [];
 		for (const num of clean_pedidos) {
 			const row = rows.find((r) => r.num === num);
 
 			if (row) {
-				const rep = rows
-					.filter((r) => r?.phone === row.phone)
+				const rep = pedidos_rows
+					.filter((r) => r?.phone === row.phone && r.num !== row.num)
 					.map((r) => r.num);
 
 				if (rep.length > 0) {
@@ -352,6 +365,16 @@ const UploadExcel = ({
 								<CardContent className="p-3">
 									<p className="text-gray-500 text-sm">
 										{analisis.num} filas seleccionadas
+									</p>
+									<p className="text-gray-500 text-sm">
+										{analisis.num - analisis.not_found.length} filas encontradas
+									</p>
+									<p className="text-gray-500 text-sm">
+										{analisis.num -
+											analisis.not_found.length -
+											analisis.reapeated_phones.length -
+											analisis.repeated.length}{" "}
+										filas a procesar
 									</p>
 								</CardContent>
 
