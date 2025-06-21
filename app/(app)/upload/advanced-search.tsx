@@ -177,6 +177,7 @@ const AdvancedSearch = ({ tipos }: Props) => {
 							<Input
 								value={filters.code}
 								placeholder="Buscar código..."
+								autoFocus
 								onChange={(e) =>
 									setFilters({
 										...filters,

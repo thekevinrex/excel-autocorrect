@@ -310,6 +310,7 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 								<Input
 									value={filters.code}
 									placeholder="Buscar código..."
+									autoFocus
 									onChange={(e) =>
 										setFilters({
 											...filters,

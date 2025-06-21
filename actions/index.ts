@@ -495,7 +495,6 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 				await db.excelResult.update({
 					where: { id: row.id },
 					data: {
-						address: correctedAddress.address,
 						city: correctedAddress.city,
 						colony: correctedAddress.colony,
 					},
@@ -629,7 +628,7 @@ async function correctStructuredAddress(
 	state: string,
 	city: string,
 	code: string
-): Promise<{ address: string; city: string; colony: string } | null> {
+): Promise<{ city: string; colony: string } | null> {
 	// Extraer posibles nombres de localidad de la dirección
 	const possibleLocations = address
 		.split(" ")
@@ -657,7 +656,6 @@ async function correctStructuredAddress(
 		// Si hay una única coincidencia para este código postal
 		if (matches.length === 1) {
 			return {
-				address: `${location} (${matches[0].d_asenta})`,
 				city: matches[0].d_muni,
 				colony: matches[0].d_asenta,
 			};
@@ -851,9 +849,34 @@ export async function pre_f4(excel_id: number) {
 		(r) => r.status !== "OK" && !(r.status === "PENDING" && r.posibleData)
 	);
 
+	const emptyFieldsResults = [
+		...pendingWithPossibleData,
+		...otherResults,
+	].filter(
+		(r) =>
+			!r.colony ||
+			!r.city ||
+			!r.state ||
+			!r.code ||
+			(typeof r.code === "string" && r.code.trim().length === 0)
+	);
+
+	const fourDigitCPResults = [
+		...pendingWithPossibleData,
+		...otherResults,
+	].filter(
+		(r) => r.code && typeof r.code === "string" && /^\d{4}$/.test(r.code.trim())
+	);
+
+	const restResults = [...pendingWithPossibleData, ...otherResults].filter(
+		(r) => !emptyFieldsResults.includes(r) && !fourDigitCPResults.includes(r)
+	);
+
 	const reorderedResults = [
 		...okResults,
-		...[...pendingWithPossibleData, ...otherResults].sort((r, b) =>
+		...emptyFieldsResults,
+		...fourDigitCPResults,
+		...restResults.sort((r, b) =>
 			r.num?.startsWith("#D") || r.num?.startsWith("#d") ? -1 : 1
 		),
 	];
@@ -1188,8 +1211,10 @@ export async function search_results(
 		return [];
 	}
 
+	let results;
+
 	if (code) {
-		const results = await db.address.findMany({
+		results = await db.address.findMany({
 			where: {
 				d_code: {
 					contains: `${code.trim()}`,
@@ -1197,7 +1222,39 @@ export async function search_results(
 				},
 			},
 		});
+	}
 
+	if (!results || results.length === 0) {
+		results = await db.address.findMany({});
+	}
+
+	const keys = [];
+
+	if (colony) {
+		keys.push({
+			name: "d_asenta",
+		});
+	}
+
+	if (tipe_asenta) {
+		keys.push({
+			name: "d_tipo_asenta",
+		});
+	}
+
+	if (state) {
+		keys.push({
+			name: "d_esta",
+		});
+	}
+
+	if (muni) {
+		keys.push({
+			name: "d_muni",
+		});
+	}
+
+	if (keys.length === 0) {
 		return results.map((a) => ({
 			muni: a.d_muni,
 			city: a.d_ciud,
@@ -1209,32 +1266,12 @@ export async function search_results(
 		}));
 	}
 
-	const address = await db.address.findMany({});
-
-	const fuseAddress = new Fuse(address, {
-		keys: [
-			{
-				name: "d_asenta",
-				weight: 5, // Peso aumentado para colonia
-			},
-			{
-				name: "d_tipo_asenta",
-				weight: 5, // Peso aumentado para colonia
-			},
-			{
-				name: "d_esta",
-				weight: 5, // Peso aumentado para colonia
-			},
-			{
-				name: "d_muni",
-				weight: 5,
-			},
-		],
+	const fuseAddress = new Fuse(results, {
+		keys,
 		includeScore: true,
 		shouldSort: true,
-		useExtendedSearch: true,
 		minMatchCharLength: 3, // Reducir para permitir coincidencias más flexibles
-		threshold: 0.6,
+		threshold: 0.2,
 	});
 
 	let $or = [];
