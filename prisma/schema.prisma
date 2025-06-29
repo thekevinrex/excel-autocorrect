@@ -69,6 +69,7 @@ enum ExcelType {
 
 enum ResultStatus {
   OK
+  OK_FILTER
   EQUAL
   ERROR
   SKIP

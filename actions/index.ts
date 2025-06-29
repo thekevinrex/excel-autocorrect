@@ -479,8 +479,14 @@ export async function pre_process_rows(
 	}
 }
 
+function removeAccents(str: string) {
+	return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 	let stats = 0;
+
+	const address = await db.address.findMany();
 
 	for (const row of rows) {
 		if (row.address && row.state && row.city && row.code) {
@@ -497,6 +503,7 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					data: {
 						city: correctedAddress.city,
 						colony: correctedAddress.colony,
+						status: "OK_FILTER",
 					},
 				});
 				stats++;
@@ -516,49 +523,196 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 			if (correctedColony) {
 				await db.excelResult.update({
 					where: { id: row.id },
-					data: { colony: correctedColony },
+					data: {
+						status: "OK_FILTER",
+						colony: correctedColony,
+					},
 				});
 				stats++;
 				continue;
 			}
 		}
 
-		if (
-			row.colony &&
-			(row.colony.toLowerCase().includes("fraccionamiento") ||
-				row.colony.toLowerCase().includes("barrio"))
-		) {
-			const baseColonyName = row.colony
-				.replace(/fraccionamiento/gi, "")
-				.replace(/barrio/gi, "")
-				.trim();
+		if (row.colony) {
+			const baseColonyName = getPossibleColonyNames(row.colony)[0];
 
 			// Buscar coincidencias en la misma ciudad y estado
-			const matchingAddresses = await db.address.findMany({
-				where: {
-					d_esta: `${row.state}`,
-					d_muni: `${row.city}`,
-					OR: [
-						{ d_asenta: { contains: baseColonyName } },
-						{ d_asenta: { contains: row.colony } },
+
+			const matchingStateAndCode = address.filter(
+				(a) =>
+					removeAccents(a.d_esta.toLowerCase()).includes(
+						removeAccents(`${row.state}`.toLowerCase())
+					) && a.d_code === `${row.code}`
+			);
+
+			if (row.colony.toLowerCase().includes("centro") && row.city) {
+				// Si la colonia contiene "centro", buscamos coincidencias en el estado y código
+				const fuseCentro = new Fuse(
+					matchingStateAndCode.map((m) => ({
+						...m,
+						d_muni: removeAccents(m.d_muni),
+					})),
+					{
+						keys: [
+							{
+								name: "d_muni",
+							},
+						],
+						includeScore: true,
+						shouldSort: true,
+						threshold: 0.6,
+					}
+				);
+
+				const possibleCentroMatches = fuseCentro.search({
+					$or: [
+						{
+							d_muni: removeAccents(row.city?.toLowerCase() ?? ""),
+						},
 					],
-				},
-				select: {
-					d_asenta: true,
-					d_tipo_asenta: true,
-					d_code: true, // Necesario para verificar duplicados en el mismo CP
-				},
+				});
+
+				let bestMath =
+					possibleCentroMatches.length > 0
+						? possibleCentroMatches.find((m) => {
+								return removeAccents(m.item.d_muni.toLowerCase()).includes(
+									removeAccents(row.city?.toLowerCase() ?? "")
+								);
+						  })
+						: null;
+
+				if (!bestMath && possibleCentroMatches.length === 1) {
+					bestMath = possibleCentroMatches[0];
+				}
+
+				if (!bestMath && matchingStateAndCode.length > 0) {
+					const matchingAddress = matchingStateAndCode.find((a) => {
+						return removeAccents(row.city?.toLowerCase() ?? "").includes(
+							removeAccents(a.d_muni.toLowerCase() ?? "")
+						);
+					});
+
+					if (matchingAddress) {
+						bestMath = {
+							item: matchingAddress,
+							score: 0,
+							refIndex: 0,
+						};
+					}
+				}
+
+				if (
+					!bestMath &&
+					possibleCentroMatches.length > 0 &&
+					row.state?.toLowerCase() === "centro"
+				) {
+					bestMath = possibleCentroMatches[0];
+				}
+
+				if (bestMath) {
+					// Si encontramos una coincidencia, actualizamos la colonia
+					await db.excelResult.update({
+						where: { id: row.id },
+						data: {
+							colony: bestMath.item.d_asenta,
+							city: bestMath.item.d_muni,
+							state: bestMath.item.d_esta,
+							code: bestMath.item.d_code,
+						},
+					});
+					stats++;
+					continue;
+				}
+			}
+
+			const fuseStateCode = new Fuse(matchingStateAndCode, {
+				keys: [
+					{
+						name: "d_asenta",
+					},
+				],
+				includeScore: true,
+				shouldSort: true,
+				threshold: 0.3,
 			});
 
-			if (matchingAddresses.length === 1) {
-				// Solo hay una coincidencia → Actualizar
+			const possibleMatchesStateCode = fuseStateCode.search({
+				$or: [
+					{
+						d_asenta: baseColonyName,
+					},
+					{
+						d_asenta: row.colony,
+					},
+				],
+			});
+
+			if (
+				possibleMatchesStateCode.length === 1 ||
+				possibleMatchesStateCode?.[0]?.item?.d_asenta.toLowerCase() ===
+					baseColonyName.toLowerCase()
+			) {
+				// Si encontramos una coincidencia, actualizamos la colonia
 				await db.excelResult.update({
 					where: { id: row.id },
-					data: { colony: matchingAddresses[0].d_asenta },
+					data: {
+						colony: possibleMatchesStateCode[0].item.d_asenta,
+						city: possibleMatchesStateCode[0].item.d_muni,
+						state: possibleMatchesStateCode[0].item.d_esta,
+						code: possibleMatchesStateCode[0].item.d_code,
+					},
 				});
 				stats++;
+				continue;
 			}
-			// Si hay múltiples coincidencias en el mismo CP, no hacemos cambios (queda para revisión manual)
+
+			const matchingAddresses = address.filter(
+				(a) =>
+					a.d_esta === `${row.state}` ||
+					a.d_code === `${row.code}` ||
+					a.d_muni === `${row.city}`
+			);
+
+			const fuseColony = new Fuse(matchingAddresses, {
+				keys: [
+					{
+						name: "d_asenta",
+					},
+				],
+				includeScore: true,
+				shouldSort: true,
+				threshold: 0.3,
+			});
+
+			const possibleMatchesColony = fuseColony.search({
+				$or: [
+					{
+						d_asenta: baseColonyName,
+					},
+					{
+						d_asenta: row.colony,
+					},
+				],
+			});
+
+			if (
+				possibleMatchesColony.length === 1 ||
+				possibleMatchesColony?.[0]?.item?.d_asenta.toLowerCase() ===
+					baseColonyName.toLowerCase()
+			) {
+				// Si encontramos una coincidencia, actualizamos la colonia
+				await db.excelResult.update({
+					where: { id: row.id },
+					data: {
+						colony: possibleMatchesColony[0].item.d_asenta,
+						city: possibleMatchesColony[0].item.d_muni,
+						state: possibleMatchesColony[0].item.d_esta,
+						code: possibleMatchesColony[0].item.d_code,
+					},
+				});
+				stats++;
+				continue;
+			}
 		}
 
 		if (row.colony && /\d+/.test(row.colony)) {
@@ -641,9 +795,9 @@ async function correctStructuredAddress(
 				d_code: code,
 				d_esta: state,
 				OR: [
-					{ d_asenta: { contains: location } },
-					{ d_muni: { contains: location } },
-					{ d_ciud: { contains: location } },
+					{ d_asenta: { contains: location, mode: "insensitive" } },
+					{ d_muni: { contains: location, mode: "insensitive" } },
+					{ d_ciud: { contains: location, mode: "insensitive" } },
 				],
 			},
 			select: {
@@ -666,13 +820,13 @@ async function correctStructuredAddress(
 
 // Verifica si la colonia tiene prefijos (Fracc, Colonia, etc.)
 function isPrefixedColony(colony: string): boolean {
-	return /^(fracc|fraccionamiento|colonia)\s/i.test(colony);
+	return /^(fracc|fraccionamiento|colonia|barrio)\s/i.test(colony);
 }
 
 // Genera posibles nombres base para búsqueda (ej: "Fracc Montoya IVO" → ["Montoya IVO", "IVO Montoya"])
 function getPossibleColonyNames(colony: string): string[] {
 	const baseName = colony
-		.replace(/^(fracc|fraccionamiento|colonia)\s/i, "")
+		.replace(/^(fracc|fraccionamiento|colonia|barrio)\s/i, "")
 		.trim();
 
 	// Si tiene números romanos o naturales, probar diferentes ordenamientos
@@ -701,7 +855,7 @@ async function findMatchingColony(
 				d_code: code,
 				d_esta: state,
 				d_muni: city,
-				d_asenta: { contains: name },
+				d_asenta: { contains: name, mode: "insensitive" },
 			},
 			select: { d_asenta: true },
 		});
@@ -748,7 +902,7 @@ export async function pre_f2(excel_id: number, rows: ExcelResult[]) {
 					id: row.id,
 				},
 				data: {
-					status: "OK",
+					status: "OK_FILTER",
 
 					code: f2_posibles[0]?.d_code ? f2_posibles[0].d_code : undefined,
 					city: f2_posibles[0]?.d_muni ? f2_posibles[0].d_muni : undefined,
@@ -840,13 +994,18 @@ export async function pre_f4(excel_id: number) {
 		},
 	});
 
-	const okResults = allResults.filter((r) => r.status === "OK");
+	const okResults = allResults.filter(
+		(r) => r.status === "OK" || r.status === "OK_FILTER"
+	);
 
 	const pendingWithPossibleData = allResults.filter(
 		(r) => r.status === "PENDING" && r.posibleData
 	);
 	const otherResults = allResults.filter(
-		(r) => r.status !== "OK" && !(r.status === "PENDING" && r.posibleData)
+		(r) =>
+			r.status !== "OK" &&
+			r.status !== "OK_FILTER" &&
+			!(r.status === "PENDING" && r.posibleData)
 	);
 
 	const emptyFieldsResults = [
@@ -962,7 +1121,7 @@ export async function verify_is_correct(excel_id: number, row: ExcelResult) {
 				id: row.id,
 			},
 			data: {
-				status: "OK",
+				status: "OK_FILTER",
 				equal_to: repeated ? repeated.id : null,
 			},
 		});
@@ -987,7 +1146,7 @@ export async function verify_is_correct(excel_id: number, row: ExcelResult) {
 					id: row.id,
 				},
 				data: {
-					status: "OK",
+					status: "OK_FILTER",
 					colony: verify_correct[0].d_asenta,
 					equal_to: repeated ? repeated.id : null,
 				},
@@ -1016,7 +1175,7 @@ export async function proccess_row(
 		throw new Error("Fila no encontrada");
 	}
 
-	if (row.status === "OK") {
+	if (row.status === "OK" || row.status === "OK_FILTER") {
 		return {
 			status: "OK",
 			row,
@@ -1369,6 +1528,9 @@ export async function export_excel(excel_id: number) {
 			switch (r.status) {
 				case "OK":
 					color = "22d3ee";
+					break;
+				case "OK_FILTER":
+					color = "2fce2f";
 					break;
 				case "SKIP":
 					color = "ef4444";
