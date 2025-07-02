@@ -4,8 +4,10 @@ import { DataType } from "@/app/(app)/(check)/check/[excel]/check";
 import { ResultType } from "@/components/check/excel-check";
 import db from "@/lib/db";
 import {
+	compareStrings,
 	formatExcel,
 	normalizeNumbersToRoman,
+	removeAccents,
 	toExcel,
 	verifyModified,
 } from "@/lib/utils";
@@ -479,17 +481,13 @@ export async function pre_process_rows(
 	}
 }
 
-function removeAccents(str: string) {
-	return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
 export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 	let stats = 0;
 
 	const address = await db.address.findMany();
 
 	for (const row of rows) {
-		if (row.address && row.state && row.city && row.code) {
+		/* if (row.address && row.state && row.city && row.code) {
 			const correctedAddress = await correctStructuredAddress(
 				row.address,
 				row.state,
@@ -503,13 +501,12 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					data: {
 						city: correctedAddress.city,
 						colony: correctedAddress.colony,
-						status: "OK_FILTER",
 					},
 				});
 				stats++;
 				continue;
 			}
-		}
+		} */
 
 		if (row.colony && isPrefixedColony(row.colony)) {
 			const baseNames = getPossibleColonyNames(row.colony);
@@ -524,7 +521,6 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 				await db.excelResult.update({
 					where: { id: row.id },
 					data: {
-						status: "OK_FILTER",
 						colony: correctedColony,
 					},
 				});
@@ -534,18 +530,20 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 		}
 
 		if (row.colony) {
-			const baseColonyName = getPossibleColonyNames(row.colony)[0];
+			const baseColonyName = getPossibleColonyNames(
+				row.colony.toLowerCase()
+			)[0];
 
 			// Buscar coincidencias en la misma ciudad y estado
 
 			const matchingStateAndCode = address.filter(
 				(a) =>
-					removeAccents(a.d_esta.toLowerCase()).includes(
-						removeAccents(`${row.state}`.toLowerCase())
+					removeAccents(`${row.state}`.toLowerCase()).includes(
+						removeAccents(a.d_esta.toLowerCase())
 					) && a.d_code === `${row.code}`
 			);
 
-			if (row.colony.toLowerCase().includes("centro") && row.city) {
+			if (row.colony.toLowerCase().includes("centro") && !!row.city) {
 				// Si la colonia contiene "centro", buscamos coincidencias en el estado y código
 				const fuseCentro = new Fuse(
 					matchingStateAndCode.map((m) => ({
@@ -553,71 +551,134 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 						d_muni: removeAccents(m.d_muni),
 					})),
 					{
-						keys: [
-							{
-								name: "d_muni",
-							},
-						],
+						keys: ["d_muni"],
 						includeScore: true,
 						shouldSort: true,
-						threshold: 0.6,
+						threshold: 0.2,
 					}
 				);
 
-				const possibleCentroMatches = fuseCentro.search({
-					$or: [
-						{
-							d_muni: removeAccents(row.city?.toLowerCase() ?? ""),
-						},
-					],
+				const possibleCentroMatches = fuseCentro
+					.search(removeAccents(row.city?.toLowerCase() ?? ""))
+					.sort((a, b) => a.score! - b.score!);
+
+				let bestMath = possibleCentroMatches.filter((m) => {
+					if (
+						removeAccents(m.item.d_asenta?.toLowerCase() ?? "").includes(
+							removeAccents(m.item.d_muni.toLowerCase() ?? "")
+						)
+					) {
+						return true;
+					}
+
+					if (
+						removeAccents(row.city?.toLowerCase() ?? "").includes(
+							removeAccents(m.item.d_muni.toLowerCase() ?? "")
+						)
+					) {
+						if (
+							removeAccents(row.colony?.toLowerCase() ?? "").includes(
+								removeAccents(m.item.d_muni.toLowerCase())
+							)
+						) {
+							return true;
+						}
+
+						if (
+							removeAccents(row.colony?.toLowerCase() ?? "").includes(
+								removeAccents(m.item.d_asenta.toLowerCase() ?? "")
+							)
+						) {
+							return true;
+						}
+
+						if (
+							removeAccents(m.item.d_asenta.toLowerCase() ?? "").includes(
+								removeAccents(m.item.d_muni?.toLowerCase() ?? "")
+							)
+						) {
+							return true;
+						}
+					}
+					return false;
 				});
 
-				let bestMath =
-					possibleCentroMatches.length > 0
-						? possibleCentroMatches.find((m) => {
-								return removeAccents(m.item.d_muni.toLowerCase()).includes(
-									removeAccents(row.city?.toLowerCase() ?? "")
-								);
-						  })
-						: null;
+				if (!bestMath || bestMath.length === 0) {
+					bestMath = matchingStateAndCode
+						.filter((a) => {
+							if (
+								removeAccents(row.city?.toLowerCase() ?? "").includes(
+									removeAccents(a.d_muni.toLowerCase() ?? "")
+								)
+							) {
+								if (
+									removeAccents(row.colony?.toLowerCase() ?? "").includes(
+										removeAccents(a.d_asenta.toLowerCase() ?? "")
+									)
+								) {
+									return true;
+								}
 
-				if (!bestMath && possibleCentroMatches.length === 1) {
-					bestMath = possibleCentroMatches[0];
-				}
-
-				if (!bestMath && matchingStateAndCode.length > 0) {
-					const matchingAddress = matchingStateAndCode.find((a) => {
-						return removeAccents(row.city?.toLowerCase() ?? "").includes(
-							removeAccents(a.d_muni.toLowerCase() ?? "")
-						);
-					});
-
-					if (matchingAddress) {
-						bestMath = {
-							item: matchingAddress,
+								if (
+									removeAccents(a.d_asenta.toLowerCase() ?? "").includes(
+										removeAccents(a.d_muni?.toLowerCase() ?? "")
+									)
+								) {
+									return true;
+								}
+							}
+							return false;
+						})
+						.map((a) => ({
+							item: a,
 							score: 0,
 							refIndex: 0,
-						};
+						}));
+				}
+
+				if (bestMath && bestMath.length > 1) {
+					const rankedBest = bestMath
+						.map((a) => {
+							let score = 0;
+
+							if (
+								removeAccents(row.colony?.toLowerCase() ?? "").includes(
+									removeAccents(a.item.d_muni.toLowerCase())
+								)
+							) {
+								score++;
+							}
+
+							if (
+								removeAccents(row.colony?.toLowerCase() ?? "").includes(
+									removeAccents(a.item.d_asenta.toLowerCase())
+								)
+							) {
+								score++;
+							}
+
+							return {
+								...a,
+								score,
+							};
+						})
+						.sort((a, b) => (a.score > b.score ? -1 : 1));
+
+					const selectedBest = rankedBest.find((r) => r.score >= 1);
+					if (selectedBest) {
+						bestMath = [selectedBest];
 					}
 				}
 
-				if (
-					!bestMath &&
-					possibleCentroMatches.length > 0 &&
-					row.state?.toLowerCase() === "centro"
-				) {
-					bestMath = possibleCentroMatches[0];
-				}
-
-				if (bestMath) {
+				if (bestMath && bestMath.length === 1) {
 					// Si encontramos una coincidencia, actualizamos la colonia
 					await db.excelResult.update({
 						where: { id: row.id },
 						data: {
-							colony: bestMath.item.d_asenta,
-							city: bestMath.item.d_muni,
-							state: bestMath.item.d_esta,
-							code: bestMath.item.d_code,
+							colony: bestMath[0].item.d_asenta,
+							city: bestMath[0].item.d_muni,
+							state: bestMath[0].item.d_esta,
+							code: bestMath[0].item.d_code,
 						},
 					});
 					stats++;
@@ -626,32 +687,17 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 			}
 
 			const fuseStateCode = new Fuse(matchingStateAndCode, {
-				keys: [
-					{
-						name: "d_asenta",
-					},
-				],
+				keys: ["d_asenta"],
 				includeScore: true,
 				shouldSort: true,
-				threshold: 0.3,
+				threshold: 0.2,
 			});
 
-			const possibleMatchesStateCode = fuseStateCode.search({
-				$or: [
-					{
-						d_asenta: baseColonyName,
-					},
-					{
-						d_asenta: row.colony,
-					},
-				],
-			});
+			const possibleMatchesStateCode = fuseStateCode
+				.search(baseColonyName)
+				.sort((a, b) => a.score! - b.score!);
 
-			if (
-				possibleMatchesStateCode.length === 1 ||
-				possibleMatchesStateCode?.[0]?.item?.d_asenta.toLowerCase() ===
-					baseColonyName.toLowerCase()
-			) {
+			if (possibleMatchesStateCode.length === 1) {
 				// Si encontramos una coincidencia, actualizamos la colonia
 				await db.excelResult.update({
 					where: { id: row.id },
@@ -666,48 +712,108 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 				continue;
 			}
 
-			const matchingAddresses = address.filter(
-				(a) =>
-					a.d_esta === `${row.state}` ||
+			const matchingAddresses = address.filter((a) => {
+				return (
+					compareStrings(a.d_esta, row.state || "").porcent > 60 ||
 					a.d_code === `${row.code}` ||
-					a.d_muni === `${row.city}`
-			);
+					compareStrings(a.d_muni, row.city || "").porcent > 60
+				);
+			});
 
 			const fuseColony = new Fuse(matchingAddresses, {
-				keys: [
-					{
-						name: "d_asenta",
-					},
-				],
+				keys: ["d_asenta"],
 				includeScore: true,
 				shouldSort: true,
-				threshold: 0.3,
+				threshold: 0.5,
 			});
 
-			const possibleMatchesColony = fuseColony.search({
-				$or: [
-					{
-						d_asenta: baseColonyName,
-					},
-					{
-						d_asenta: row.colony,
-					},
-				],
-			});
+			const possibleMatchesColony = fuseColony.search(baseColonyName);
 
-			if (
-				possibleMatchesColony.length === 1 ||
-				possibleMatchesColony?.[0]?.item?.d_asenta.toLowerCase() ===
-					baseColonyName.toLowerCase()
-			) {
+			let bestColonyMatch;
+
+			bestColonyMatch = matchingAddresses
+				.map((m) => {
+					let score = 0;
+
+					score += Math.max(
+						compareStrings(m.d_asenta, baseColonyName).score,
+						compareStrings(baseColonyName, m.d_asenta).score
+					);
+
+					score += Math.max(
+						compareStrings(row.city || "", m.d_muni).score,
+						compareStrings(m.d_muni, row.city || "").score
+					);
+
+					if (m.d_code === row.code) {
+						score += 3;
+					}
+
+					if (
+						removeAccents(m.d_asenta.toLowerCase()) ===
+						removeAccents(row.colony?.toLowerCase() || "")
+					) {
+						score += 4;
+					}
+
+					return {
+						...m,
+						item: m,
+						score,
+					};
+				})
+				.sort((a, b) => {
+					return a.score > b.score ? -1 : 1;
+				});
+
+			// if (!!row.state && !!row.code) {
+			// 	bestColonyMatch = possibleMatchesColony.filter((m) => {
+			// 		return (
+			// 			removeAccents(m.item.d_esta.toLowerCase()).includes(
+			// 				removeAccents(row.state.toLowerCase())
+			// 			) && row.code === m.item.d_code
+			// 		);
+			// 	});
+			// }
+
+			const bestSelected = bestColonyMatch.find((c) => c.score >= 6);
+			if (["#79743"].includes(row.num!)) {
+				console.log({
+					row: JSON.stringify(row),
+					bestColonyMatch: bestColonyMatch.map((m) => ({
+						...m,
+						item: JSON.stringify(m.item),
+					})),
+				});
+			}
+
+			if (bestSelected && bestColonyMatch.length > 1) {
+				bestColonyMatch = [bestSelected];
+			}
+
+			/* if (!bestColonyMatch || bestColonyMatch.length === 0) {
+				bestColonyMatch = matchingAddresses
+					.filter((a) => {
+						return removeAccents(a.d_asenta.toLowerCase()).includes(
+							removeAccents(baseColonyName.toLowerCase())
+						);
+					})
+					.map((a) => ({
+						item: a,
+						score: 0,
+						refIndex: 0,
+					}));
+			} */
+
+			if (bestColonyMatch && bestColonyMatch.length === 1) {
 				// Si encontramos una coincidencia, actualizamos la colonia
 				await db.excelResult.update({
 					where: { id: row.id },
 					data: {
-						colony: possibleMatchesColony[0].item.d_asenta,
-						city: possibleMatchesColony[0].item.d_muni,
-						state: possibleMatchesColony[0].item.d_esta,
-						code: possibleMatchesColony[0].item.d_code,
+						colony: bestColonyMatch[0].item.d_asenta,
+						city: bestColonyMatch[0].item.d_muni,
+						state: bestColonyMatch[0].item.d_esta,
+						code: bestColonyMatch[0].item.d_code,
 					},
 				});
 				stats++;
@@ -820,7 +926,7 @@ async function correctStructuredAddress(
 
 // Verifica si la colonia tiene prefijos (Fracc, Colonia, etc.)
 function isPrefixedColony(colony: string): boolean {
-	return /^(fracc|fraccionamiento|colonia|barrio)\s/i.test(colony);
+	return /^(fracc|fraccionamiento|colonia|barrio|col)\s/i.test(colony);
 }
 
 // Genera posibles nombres base para búsqueda (ej: "Fracc Montoya IVO" → ["Montoya IVO", "IVO Montoya"])

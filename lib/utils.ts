@@ -231,3 +231,34 @@ export function normalizeNumbersToRoman(text: string): string {
 		return numberToRoman[match] || match; // Si no está en el diccionario, lo deja igual
 	});
 }
+
+export function compareStrings(toCompare: string, compare: string) {
+	const words = compare.split(" ");
+
+	const total = words.length;
+	let hit = 0;
+
+	for (const word of words) {
+		if (
+			removeAccents(toCompare.toLowerCase()).includes(
+				removeAccents(word.toLowerCase())
+			)
+		) {
+			hit++;
+		}
+	}
+
+	const porcent = total > 0 ? (hit * 100) / total : 0;
+	const score = (5 * porcent) / 100;
+
+	return {
+		total,
+		hit,
+		porcent,
+		score,
+	};
+}
+
+export function removeAccents(str: string) {
+	return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
