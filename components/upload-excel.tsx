@@ -55,6 +55,8 @@ const UploadExcel = ({
 	const router = useRouter();
 	const ref = React.useRef<HTMLInputElement>(null);
 
+	const [cancel, setCancel] = React.useState<string>("");
+
 	const handleFileLoad = async () => {
 		const file = files?.[0];
 		const reader = new FileReader();
@@ -204,6 +206,7 @@ const UploadExcel = ({
 						type,
 						total: processedRow.length,
 						id,
+						cancel,
 					},
 
 					processedRow.slice(i, i + chunkSize)
@@ -444,6 +447,15 @@ const UploadExcel = ({
 								)}
 							</Card>
 						)}
+
+						<Input
+							placeholder="Pedidos a cancelar (Separados por comas)"
+							className="mb-5 "
+							value={cancel}
+							onChange={(e) => {
+								setCancel(e.target.value);
+							}}
+						/>
 
 						<div className="flex flex-row gap-5">
 							<Button

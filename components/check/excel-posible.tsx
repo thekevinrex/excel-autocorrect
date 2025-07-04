@@ -1,5 +1,6 @@
 import React from "react";
 import {
+	ok_result,
 	proccess_row,
 	save_result,
 	search_results,
@@ -167,6 +168,23 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 		} catch {
 			setSearch(false);
 			toast.error("Lo sentimos ha ocurrido un error al buscar");
+		}
+	};
+
+	const handleOk = async () => {
+		try {
+			setSaving(true);
+
+			await ok_result(excel.id, pos);
+
+			toast.success("Fila actualizada correctamente");
+
+			setSaving(false);
+			setPos(pos + 1);
+		} catch {
+			setSaving(false);
+
+			toast.error("Lo sentimos ha ocurrido un error al actualizar la fila");
 		}
 	};
 
@@ -354,29 +372,48 @@ const ExcelPosible = ({ result, excel, pos, setPos, tipos }: Props) => {
 					)}
 				</CardHeader>
 
-				<ResultTable
-					page={page}
-					setPage={setPage}
-					perPage={perPage}
-					show={show.filter((r) => {
-						if (filters.search === "") {
-							return true;
-						}
+				{result.status === "CANCELED" && (
+					<CardContent className="bg-slate-500 text-white pt-5">
+						<AlertTitle>Fila cancelada</AlertTitle>
+						<AlertDescription>
+							Esta fila ha sido cancelada y no se procesará.
+						</AlertDescription>
+						<Button
+							onClick={handleOk}
+							className="mt-5"
+							variant={"secondary"}
+							disabled={saving || skip}
+						>
+							Continuar
+						</Button>
+					</CardContent>
+				)}
 
-						return (
-							r.colony.toLowerCase().includes(filters.search.toLowerCase()) ||
-							r.city.toLowerCase().includes(filters.search.toLowerCase()) ||
-							r.state.toLowerCase().includes(filters.search.toLowerCase()) ||
-							r.muni.toLowerCase().includes(filters.search.toLowerCase()) ||
-							r.code
-								.toString()
-								.toLowerCase()
-								.includes(filters.search.toLowerCase())
-						);
-					})}
-					selected={selected}
-					setSelected={setSelected}
-				/>
+				{result.status !== "CANCELED" && (
+					<ResultTable
+						page={page}
+						setPage={setPage}
+						perPage={perPage}
+						show={show.filter((r) => {
+							if (filters.search === "") {
+								return true;
+							}
+
+							return (
+								r.colony.toLowerCase().includes(filters.search.toLowerCase()) ||
+								r.city.toLowerCase().includes(filters.search.toLowerCase()) ||
+								r.state.toLowerCase().includes(filters.search.toLowerCase()) ||
+								r.muni.toLowerCase().includes(filters.search.toLowerCase()) ||
+								r.code
+									.toString()
+									.toLowerCase()
+									.includes(filters.search.toLowerCase())
+							);
+						})}
+						selected={selected}
+						setSelected={setSelected}
+					/>
+				)}
 			</Card>
 
 			<Card>

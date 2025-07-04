@@ -177,6 +177,7 @@ export async function uploadExcel_Pedido(
 		type: ExcelType;
 		total: number;
 		id?: number;
+		cancel?: string;
 	},
 
 	data: DataType[]
@@ -200,12 +201,18 @@ export async function uploadExcel_Pedido(
 		id = newE.id;
 	}
 
+	let pedidosCancelados: string[] = [];
+
+	if (excel.cancel) {
+		pedidosCancelados = excel.cancel.split(",").map((p) => p.trim());
+	}
+
 	await db.excelResult.createMany({
 		data: data.map((d, i) => ({
 			excel_id: id,
 
 			row: i,
-			status: "PENDING",
+			status: pedidosCancelados.includes(d?.num) ? "CANCELED" : "PENDING",
 
 			code: d?.code ? `${d.code}` : undefined,
 			city: d?.city ? `${d.city}` : undefined,
@@ -419,14 +426,16 @@ export async function ok_result(excel_id: number, row_num: number) {
 		throw new Error("Fila no encontrada");
 	}
 
-	await db.excelResult.update({
-		where: {
-			id: row.id,
-		},
-		data: {
-			status: "OK",
-		},
-	});
+	if (row.status !== "CANCELED") {
+		await db.excelResult.update({
+			where: {
+				id: row.id,
+			},
+			data: {
+				status: "OK",
+			},
+		});
+	}
 
 	await db.excel.update({
 		where: {
@@ -487,26 +496,93 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 	const address = await db.address.findMany();
 
 	for (const row of rows) {
-		/* if (row.address && row.state && row.city && row.code) {
-			const correctedAddress = await correctStructuredAddress(
-				row.address,
-				row.state,
-				row.city,
-				row.code
-			);
+		row.colony = "" + row.colony?.replace(".", " ").trim();
 
-			if (correctedAddress) {
+		if (row.colony && /\d+/.test(row.colony)) {
+			const normalizedColony = normalizeNumbersToRoman(row.colony);
+			if (normalizedColony !== row.colony) {
 				await db.excelResult.update({
 					where: { id: row.id },
+					data: { colony: normalizedColony },
+				});
+
+				row.colony = normalizedColony;
+			}
+		}
+
+		if (
+			row.colony?.toLowerCase().includes("primera sección") ||
+			row.colony?.toLowerCase().includes("primera seccion")
+		) {
+			if (row.colony.toLowerCase().includes("san mateo")) {
+				await db.excelResult.update({
+					where: {
+						id: row.id,
+					},
 					data: {
-						city: correctedAddress.city,
-						colony: correctedAddress.colony,
+						colony: `San Mateo 1ra Sección`,
 					},
 				});
-				stats++;
-				continue;
+
+				row.colony = `San Mateo 1ra Sección`;
 			}
-		} */
+		}
+
+		if (row.colony?.toLowerCase().includes(" sm ")) {
+			await db.excelResult.update({
+				where: {
+					id: row.id,
+				},
+				data: {
+					colony: row.colony.includes(" sm ")
+						? row.colony.replace(" sm ", "Supermanzana")
+						: row.colony.replace(" Sm ", "Supermanzana"),
+					city: "Benito Juárez",
+				},
+			});
+
+			row.colony = row.colony.includes(" sm ")
+				? row.colony.replace(" sm ", "Supermanzana")
+				: row.colony.replace(" Sm ", "Supermanzana");
+
+			row.city = "Benito Juárez";
+		}
+
+		if (
+			row.colony?.toLowerCase().includes(" región ") ||
+			row.colony?.toLowerCase().includes(" region ")
+		) {
+			await db.excelResult.update({
+				where: {
+					id: row.id,
+				},
+				data: {
+					colony: row.colony.includes(" región ")
+						? row.colony.replace(" región ", "Supermanzana")
+						: row.colony.replace(" region ", "Supermanzana"),
+					city: "Benito Juárez",
+				},
+			});
+
+			row.colony = row.colony.includes(" región ")
+				? row.colony.replace(" región ", "Supermanzana")
+				: row.colony.replace(" region ", "Supermanzana");
+
+			row.city = "Benito Juárez";
+		}
+
+		if (row.city?.toLowerCase().includes("cancun")) {
+			await db.excelResult.update({
+				where: {
+					id: row.id,
+				},
+				data: {
+					city: "Benito Juárez",
+				},
+			});
+
+			row.city = "Benito Juárez";
+		}
 
 		if (row.colony && isPrefixedColony(row.colony)) {
 			const baseNames = getPossibleColonyNames(row.colony);
@@ -524,8 +600,8 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 						colony: correctedColony,
 					},
 				});
-				stats++;
-				continue;
+
+				row.colony = correctedColony;
 			}
 		}
 
@@ -549,9 +625,10 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					matchingStateAndCode.map((m) => ({
 						...m,
 						d_muni: removeAccents(m.d_muni),
+						d_ciud: removeAccents(m.d_ciud),
 					})),
 					{
-						keys: ["d_muni"],
+						keys: ["d_muni", "d_ciud"],
 						includeScore: true,
 						shouldSort: true,
 						threshold: 0.2,
@@ -566,6 +643,9 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					if (
 						removeAccents(m.item.d_asenta?.toLowerCase() ?? "").includes(
 							removeAccents(m.item.d_muni.toLowerCase() ?? "")
+						) ||
+						removeAccents(m.item.d_asenta?.toLowerCase() ?? "").includes(
+							removeAccents(m.item.d_ciud.toLowerCase() ?? "")
 						)
 					) {
 						return true;
@@ -574,11 +654,17 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					if (
 						removeAccents(row.city?.toLowerCase() ?? "").includes(
 							removeAccents(m.item.d_muni.toLowerCase() ?? "")
+						) ||
+						removeAccents(row.city?.toLowerCase() ?? "").includes(
+							removeAccents(m.item.d_ciud.toLowerCase() ?? "")
 						)
 					) {
 						if (
 							removeAccents(row.colony?.toLowerCase() ?? "").includes(
 								removeAccents(m.item.d_muni.toLowerCase())
+							) ||
+							removeAccents(row.colony?.toLowerCase() ?? "").includes(
+								removeAccents(m.item.d_ciud.toLowerCase())
 							)
 						) {
 							return true;
@@ -595,6 +681,9 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 						if (
 							removeAccents(m.item.d_asenta.toLowerCase() ?? "").includes(
 								removeAccents(m.item.d_muni?.toLowerCase() ?? "")
+							) ||
+							removeAccents(m.item.d_asenta.toLowerCase() ?? "").includes(
+								removeAccents(m.item.d_ciud?.toLowerCase() ?? "")
 							)
 						) {
 							return true;
@@ -609,6 +698,9 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 							if (
 								removeAccents(row.city?.toLowerCase() ?? "").includes(
 									removeAccents(a.d_muni.toLowerCase() ?? "")
+								) ||
+								removeAccents(row.city?.toLowerCase() ?? "").includes(
+									removeAccents(a.d_ciud.toLowerCase() ?? "")
 								)
 							) {
 								if (
@@ -622,6 +714,9 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 								if (
 									removeAccents(a.d_asenta.toLowerCase() ?? "").includes(
 										removeAccents(a.d_muni?.toLowerCase() ?? "")
+									) ||
+									removeAccents(a.d_asenta.toLowerCase() ?? "").includes(
+										removeAccents(a.d_ciud?.toLowerCase() ?? "")
 									)
 								) {
 									return true;
@@ -644,6 +739,14 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 							if (
 								removeAccents(row.colony?.toLowerCase() ?? "").includes(
 									removeAccents(a.item.d_muni.toLowerCase())
+								)
+							) {
+								score++;
+							}
+
+							if (
+								removeAccents(row.colony?.toLowerCase() ?? "").includes(
+									removeAccents(a.item.d_ciud.toLowerCase())
 								)
 							) {
 								score++;
@@ -703,7 +806,9 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					where: { id: row.id },
 					data: {
 						colony: possibleMatchesStateCode[0].item.d_asenta,
-						city: possibleMatchesStateCode[0].item.d_muni,
+						city:
+							possibleMatchesStateCode[0].item.d_ciud ||
+							possibleMatchesStateCode[0].item.d_muni,
 						state: possibleMatchesStateCode[0].item.d_esta,
 						code: possibleMatchesStateCode[0].item.d_code,
 					},
@@ -716,18 +821,10 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 				return (
 					compareStrings(a.d_esta, row.state || "").porcent > 60 ||
 					a.d_code === `${row.code}` ||
-					compareStrings(a.d_muni, row.city || "").porcent > 60
+					compareStrings(a.d_muni, row.city || "").porcent > 60 ||
+					compareStrings(a.d_ciud, row.city || "").porcent > 60
 				);
 			});
-
-			const fuseColony = new Fuse(matchingAddresses, {
-				keys: ["d_asenta"],
-				includeScore: true,
-				shouldSort: true,
-				threshold: 0.5,
-			});
-
-			const possibleMatchesColony = fuseColony.search(baseColonyName);
 
 			let bestColonyMatch;
 
@@ -743,6 +840,11 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					score += Math.max(
 						compareStrings(row.city || "", m.d_muni).score,
 						compareStrings(m.d_muni, row.city || "").score
+					);
+
+					score += Math.max(
+						compareStrings(row.city || "", m.d_ciud).score,
+						compareStrings(m.d_ciud, row.city || "").score
 					);
 
 					if (m.d_code === row.code) {
@@ -766,26 +868,7 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					return a.score > b.score ? -1 : 1;
 				});
 
-			// if (!!row.state && !!row.code) {
-			// 	bestColonyMatch = possibleMatchesColony.filter((m) => {
-			// 		return (
-			// 			removeAccents(m.item.d_esta.toLowerCase()).includes(
-			// 				removeAccents(row.state.toLowerCase())
-			// 			) && row.code === m.item.d_code
-			// 		);
-			// 	});
-			// }
-
-			const bestSelected = bestColonyMatch.find((c) => c.score >= 6);
-			if (["#79743"].includes(row.num!)) {
-				console.log({
-					row: JSON.stringify(row),
-					bestColonyMatch: bestColonyMatch.map((m) => ({
-						...m,
-						item: JSON.stringify(m.item),
-					})),
-				});
-			}
+			const bestSelected = bestColonyMatch.find((c) => c.score >= 12);
 
 			if (bestSelected && bestColonyMatch.length > 1) {
 				bestColonyMatch = [bestSelected];
@@ -811,7 +894,8 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 					where: { id: row.id },
 					data: {
 						colony: bestColonyMatch[0].item.d_asenta,
-						city: bestColonyMatch[0].item.d_muni,
+						city:
+							bestColonyMatch[0].item.d_ciud || bestColonyMatch[0].item.d_muni,
 						state: bestColonyMatch[0].item.d_esta,
 						code: bestColonyMatch[0].item.d_code,
 					},
@@ -820,108 +904,9 @@ export async function pre_f01(excel_id: number, rows: ExcelResult[]) {
 				continue;
 			}
 		}
-
-		if (row.colony && /\d+/.test(row.colony)) {
-			const normalizedColony = normalizeNumbersToRoman(row.colony);
-			if (normalizedColony !== row.colony) {
-				await db.excelResult.update({
-					where: { id: row.id },
-					data: { colony: normalizedColony },
-				});
-				stats++;
-			}
-		}
-
-		if (
-			row.colony?.toLowerCase().includes("primera sección") ||
-			row.colony?.toLowerCase().includes("primera seccion")
-		) {
-			if (row.colony.toLowerCase().includes("san mateo")) {
-				await db.excelResult.update({
-					where: {
-						id: row.id,
-					},
-					data: {
-						colony: `San Mateo 1ra Sección`,
-					},
-				});
-
-				stats++;
-			}
-		}
-
-		if (row.colony?.toLowerCase().includes(" sm ")) {
-			await db.excelResult.update({
-				where: {
-					id: row.id,
-				},
-				data: {
-					colony: row.colony.includes(" sm ")
-						? row.colony.replace(" sm ", "Supermanzana")
-						: row.colony.replace(" Sm ", "Supermanzana"),
-				},
-			});
-
-			stats++;
-		}
-
-		if (row.city?.toLowerCase().includes("cancun")) {
-			await db.excelResult.update({
-				where: {
-					id: row.id,
-				},
-				data: {
-					city: "Benito Juárez",
-				},
-			});
-
-			stats++;
-		}
 	}
 
 	return stats;
-}
-
-// Corrige direcciones mal estructuradas (caso Palo Gordo)
-async function correctStructuredAddress(
-	address: string,
-	state: string,
-	city: string,
-	code: string
-): Promise<{ city: string; colony: string } | null> {
-	// Extraer posibles nombres de localidad de la dirección
-	const possibleLocations = address
-		.split(" ")
-		.filter((part) => part.length > 3 && !/^\d+$/.test(part));
-
-	// Buscar coincidencias exactas en la base de datos
-	for (const location of possibleLocations) {
-		const matches = await db.address.findMany({
-			where: {
-				d_code: code,
-				d_esta: state,
-				OR: [
-					{ d_asenta: { contains: location, mode: "insensitive" } },
-					{ d_muni: { contains: location, mode: "insensitive" } },
-					{ d_ciud: { contains: location, mode: "insensitive" } },
-				],
-			},
-			select: {
-				d_asenta: true,
-				d_muni: true,
-				d_ciud: true,
-			},
-		});
-
-		// Si hay una única coincidencia para este código postal
-		if (matches.length === 1) {
-			return {
-				city: matches[0].d_muni,
-				colony: matches[0].d_asenta,
-			};
-		}
-	}
-	return null;
 }
 
 // Verifica si la colonia tiene prefijos (Fracc, Colonia, etc.)
@@ -959,8 +944,20 @@ async function findMatchingColony(
 		const matches = await db.address.findMany({
 			where: {
 				d_code: code,
-				d_esta: state,
-				d_muni: city,
+				d_esta: {
+					contains: state,
+					mode: "insensitive",
+				},
+
+				OR: [
+					{
+						d_ciud: { contains: city, mode: "insensitive" },
+					},
+					{
+						d_muni: { contains: city, mode: "insensitive" },
+					},
+				],
+
 				d_asenta: { contains: name, mode: "insensitive" },
 			},
 			select: { d_asenta: true },
@@ -1011,7 +1008,7 @@ export async function pre_f2(excel_id: number, rows: ExcelResult[]) {
 					status: "OK_FILTER",
 
 					code: f2_posibles[0]?.d_code ? f2_posibles[0].d_code : undefined,
-					city: f2_posibles[0]?.d_muni ? f2_posibles[0].d_muni : undefined,
+					city: f2_posibles[0]?.d_ciud ? f2_posibles[0].d_ciud : undefined,
 					colony: f2_posibles[0]?.d_asenta
 						? f2_posibles[0].d_asenta
 						: undefined,
@@ -1049,7 +1046,11 @@ export async function pre_f3(excel_id: number, rows: ExcelResult[]) {
 				},
 				{
 					name: "d_muni",
-					weight: 6, // Ciudad importante pero flexible
+					weight: 5, // Ciudad importante pero flexible
+				},
+				{
+					name: "d_ciud",
+					weight: 6, // Ciudad menos importante
 				},
 			],
 			includeScore: true,
@@ -1066,6 +1067,9 @@ export async function pre_f3(excel_id: number, rows: ExcelResult[]) {
 				},
 				{
 					d_muni: `${row.city}`,
+				},
+				{
+					d_ciud: `${row.city}`,
 				},
 			],
 		});
@@ -1284,6 +1288,18 @@ export async function proccess_row(
 	if (row.status === "OK" || row.status === "OK_FILTER") {
 		return {
 			status: "OK",
+			row,
+
+			errors: [],
+			equals: [],
+
+			posible: [],
+		};
+	}
+
+	if (row.status === "CANCELED") {
+		return {
+			status: "CANCELED",
 			row,
 
 			errors: [],
@@ -1517,6 +1533,10 @@ export async function search_results(
 		keys.push({
 			name: "d_muni",
 		});
+
+		keys.push({
+			name: "d_ciud",
+		});
 	}
 
 	if (keys.length === 0) {
@@ -1563,6 +1583,10 @@ export async function search_results(
 		$or.push({
 			d_muni: muni,
 		});
+
+		$or.push({
+			d_ciud: muni,
+		});
 	}
 
 	const possibleAddresses = fuseAddress.search({
@@ -1572,7 +1596,7 @@ export async function search_results(
 	const validAddresses = possibleAddresses.sort((a, b) => a.score! - b.score!);
 
 	return validAddresses.map((a) => ({
-		muni: a.item.d_muni,
+		muni: a.item.d_ciud || a.item.d_muni,
 		city: a.item.d_ciud,
 		code: a.item.d_code,
 		colony: a.item.d_asenta,
@@ -1670,4 +1694,34 @@ export async function getAllTipoAsent() {
 	const unique = [...new Set(results.map((r) => r.d_tipo_asenta))];
 
 	return unique.filter(Boolean);
+}
+
+export async function cancel_pedidos(excel_id: number, cancel: string) {
+	const excel = await db.excel.findFirst({
+		where: {
+			id: excel_id,
+		},
+	});
+
+	if (!excel) {
+		throw new Error("Excel no encontrado");
+	}
+
+	const idsToCancel = cancel.split(",").map((id) => id.trim());
+
+	const results = await db.excelResult.updateMany({
+		where: {
+			excel_id,
+			num: {
+				in: idsToCancel,
+			},
+		},
+		data: {
+			status: "CANCELED",
+		},
+	});
+
+	revalidatePath(`/check/${excel_id}`);
+
+	return results;
 }

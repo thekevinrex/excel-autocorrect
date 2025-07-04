@@ -11,6 +11,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { proccess_row } from "@/actions";
 import { useRouter } from "next/navigation";
+import CancelNum from "./cancel-num";
 
 type Props = {
 	excel: Excel;
@@ -104,6 +105,8 @@ const Check = ({ excel, tipos }: Props) => {
 				pos={pos}
 				setPos={setPos}
 			/>
+
+			<CancelNum excelId={excel.id} />
 		</>
 	);
 };

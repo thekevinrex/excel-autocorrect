@@ -74,6 +74,7 @@ enum ResultStatus {
   ERROR
   SKIP
   PENDING
+  CANCELED
 }
 
 
